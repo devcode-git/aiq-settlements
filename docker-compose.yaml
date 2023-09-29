@@ -1,0 +1,26 @@
+version: '3.7'
+
+volumes:
+  postgres_data:
+    driver: local
+
+services:
+  postgres:
+    image: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: aiq-settlement
+      POSTGRES_USER: aiq-user
+      POSTGRES_PASSWORD: localpass
+    ports:
+      - "5432:5432"
+  aiq-settlement:
+    build:
+      context: .
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: aiq-settlement
+      POSTGRES_USER: aiq-user
+      POSTGRES_PASSWORD: localpass
