@@ -1,0 +1,2 @@
+# aiq-settlements
+git init
