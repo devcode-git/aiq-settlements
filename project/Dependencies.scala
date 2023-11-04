@@ -28,7 +28,8 @@ object Dependencies {
     "io.d11" %% "zhttp" % Version.d11ZioHttp,
     "dev.zio" %% "zio-json" % Version.zioJson,
     "dev.zio" %% "zio-streams" % Version.zio,
-    "dev.zio" %% "zio-logging" % Version.zioLogging
+    "dev.zio" %% "zio-logging" % Version.zioLogging,
+    "dev.zio" %% "zio-ftp" % "0.4.1"
   )
 
   val tapir = Seq(
@@ -36,12 +37,20 @@ object Dependencies {
     "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % Version.tapir
   )
 
+  val csvParser = Seq("com.github.tototoshi" %% "scala-csv" % "1.3.10")
+
+  val xlsxParser = Seq("org.apache.poi" % "poi" % "3.17",
+    "org.apache.poi" % "poi-contrib" % "3.7-beta3",
+    ("org.apache.poi" % "poi-ooxml" % "3.17")
+      .exclude(org = "xml-apis", name = "xml-apis")
+      .exclude(org = "stax", name = "stax-api"))
+
   val scalaFixDeps = Seq("com.github.liancheng" %% "organize-imports" % "0.6.0")
 
 //  private val serviceSpecific = Seq(
 //    "com.devcode" %% "aiq-common-domain" % "0.0.3",
 //  )
 
-  val all = zio ++ tapir
+  val all = zio ++ tapir ++ csvParser ++ xlsxParser
 //  val all = zio ++ serviceSpecific
 }
