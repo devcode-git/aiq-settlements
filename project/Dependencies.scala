@@ -18,6 +18,7 @@ object Dependencies {
     val slf4j = "1.7.36"
     val tapir = "1.6.0"
     val quartzSch = "2.5.0-rc1"
+    val elasticVersion = "7.17.4"
   }
 
   val zio = Seq(
@@ -45,12 +46,16 @@ object Dependencies {
       .exclude(org = "xml-apis", name = "xml-apis")
       .exclude(org = "stax", name = "stax-api"))
 
+  val elastic = Seq("com.sksamuel.elastic4s" %% "elastic4s-client-esjava" % Version.elasticVersion,
+    "com.sksamuel.elastic4s" %% "elastic4s-http-streams" % Version.elasticVersion,
+    "com.sksamuel.elastic4s" %% "elastic4s-effect-zio" % Version.elasticVersion)
+
   val scalaFixDeps = Seq("com.github.liancheng" %% "organize-imports" % "0.6.0")
 
 //  private val serviceSpecific = Seq(
 //    "com.devcode" %% "aiq-common-domain" % "0.0.3",
 //  )
 
-  val all = zio ++ tapir ++ csvParser ++ xlsxParser
+  val all = zio ++ tapir ++ csvParser ++ xlsxParser ++ elastic
 //  val all = zio ++ serviceSpecific
 }
