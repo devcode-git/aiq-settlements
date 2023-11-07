@@ -48,7 +48,8 @@ object Dependencies {
 
   val elastic = Seq("com.sksamuel.elastic4s" %% "elastic4s-client-esjava" % Version.elasticVersion,
     "com.sksamuel.elastic4s" %% "elastic4s-http-streams" % Version.elasticVersion,
-    "com.sksamuel.elastic4s" %% "elastic4s-effect-zio" % Version.elasticVersion)
+    "com.sksamuel.elastic4s" %% "elastic4s-effect-zio" % Version.elasticVersion,
+    "com.sksamuel.elastic4s" %% "elastic4s-json-circe" % "7.1.0")
 
   val scalaFixDeps = Seq("com.github.liancheng" %% "organize-imports" % "0.6.0")
 

@@ -8,13 +8,13 @@ import zio.stream.ZStream
 
 object CSVParser {
 
-  def parse(path: Path, defaultDelimiter: Char = ';') = {
+  def parse(path: Path, defaultDelimiter: Char = ',') = {
     implicit object csvFormat extends DefaultCSVFormat {
       override val delimiter: Char = defaultDelimiter
     }
     for {
-      rows <- ZStream.fromIterator(CSVReader.open(path.toFile).iterator).tap(row => ZIO.logInfo(row.mkString("|"))).runCollect
-    } yield rows
+      rows <- ZStream.fromIterator(CSVReader.open(path.toFile).iterator).runCollect
+    } yield (rows.head, rows.tail)
   }
 
 }
