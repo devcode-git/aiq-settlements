@@ -41,7 +41,8 @@ object Main extends ZIOAppDefault {
 //      _          <- ZIO.logInfo("Starting HTTP server")
 //      _          <- Server.serve(routes.serverEndpoints)
 //      _ <- SftpDownloader.downloadAccount()
-      docs <- CSVParser.parseESDocs(new java.io.File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test.csv").toPath)
+      rows <- CSVParser.parse(new java.io.File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test.csv").toPath)
+      docs = ESDoc.parseESDocs(rows)
       _ <- addDocs(docs).provide(elasticDAO)
 
 //      chunks <- CSVParser.parse(new java.io.File("/Users/white/Desktop/win/Winbet_Deposit_31032023.csv").toPath)

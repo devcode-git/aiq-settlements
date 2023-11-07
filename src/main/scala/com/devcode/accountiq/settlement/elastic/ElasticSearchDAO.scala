@@ -51,6 +51,14 @@ case class ESDoc(doc: Map[String, String])
 
 object ESDoc {
   implicit val formatter: Indexable[ESDoc] = (t: ESDoc) => t.doc.toJson
+
+  def parseESDocs(rows: List[List[String]]) = {
+    rows match {
+      case _ :: Nil => List()
+      case Nil => List()
+      case headerRow :: dataRows => dataRows.map(row => headerRow.zip(row)).map(_.toMap).map(ESDoc(_))
+    }
+  }
 }
 
 object ElasticSearchDAO {

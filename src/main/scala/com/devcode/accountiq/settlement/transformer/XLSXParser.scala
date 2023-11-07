@@ -9,7 +9,7 @@ import zio._
 
 object XLSXParser {
 
-  def parse(path: Path) = {
+  def parse(path: Path): ZIO[Any, Nothing, List[List[String]]] = {
     val wb = WorkbookFactory.create(new FileInputStream(path.toFile))
     val sheet = wb.getSheetAt(0)
     println(s" total row= ${sheet.getLastRowNum}")
@@ -32,7 +32,7 @@ object XLSXParser {
       }
     })
 
-    ZIO.succeed(rows)
+    ZIO.succeed(rows.toList)
   }
 
 }

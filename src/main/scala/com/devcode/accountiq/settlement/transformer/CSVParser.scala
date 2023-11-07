@@ -8,24 +8,13 @@ import zio.stream.ZStream
 
 object CSVParser {
 
-  def parseESDocs(path: Path, defaultDelimiter: Char = ',') = {
-    parse(path, defaultDelimiter).map(createESDocs)
-  }
-
-  private def createESDocs(rows: Seq[Seq[String]]) = {
-    val headerRow = rows.head
-    val dataRows = rows.tail
-
-    dataRows.map(row => headerRow.zip(row)).map(_.toMap).map(ESDoc(_)).toList
-  }
-
-  private def parse(path: Path, defaultDelimiter: Char = ',') = {
+  def parse(path: Path, defaultDelimiter: Char = ',') = {
     implicit object csvFormat extends DefaultCSVFormat {
       override val delimiter: Char = defaultDelimiter
     }
     for {
-      rows <- ZStream.fromIterator(CSVReader.open(path.toFile).iterator).runCollect
-    } yield rows
+      rows <- ZStream.fromIterator(CSVReader.open(path.toFile).iterator).map(_.toList).runCollect
+    } yield rows.toList
   }
 
 }
