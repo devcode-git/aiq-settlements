@@ -1,5 +1,5 @@
 package com.devcode.accountiq.settlement
-import com.devcode.accountiq.settlement.elastic.{ESDoc, ElasticSearchClient, ElasticSearchDAO}
+import com.devcode.accountiq.settlement.elastic.{ESDoc, ElasticSearchClient, ElasticSearchDAO, SettlementDetailReport}
 import com.devcode.accountiq.settlement.sftp.SftpDownloader
 import com.devcode.accountiq.settlement.transformer.{CSVParser, XLSXParser}
 import com.devcode.accountiq.settlement.util.FileUtil
@@ -56,9 +56,9 @@ object Main extends ZIOAppDefault {
       path = new File("/Users/white/Desktop/test2.xlsx").toPath
       fileId <- FileUtil.getFileNamePart(path.toString)
       rowsXLSX <- XLSXParser.parse(path).tap(rows => ZIO.foreach(rows)(row=> ZIO.logInfo(row.mkString(","))))
-      docs = ESDoc.parseESDocs(rowsXLSX, fileId)
+      docs = ESDoc.parseESDocs(rowsXLSX, fileId).map(SettlementDetailReport.fromESDocRaw)
       _ <- ZIO.logInfo(docs.mkString(","))
-      _ <- addDocs(docs).provide(elasticDAO)
+//      _ <- addDocs(docs).provide(elasticDAO)
 
     } yield ())
 
