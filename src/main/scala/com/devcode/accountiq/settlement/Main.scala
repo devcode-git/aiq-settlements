@@ -2,6 +2,7 @@ package com.devcode.accountiq.settlement
 import com.devcode.accountiq.settlement.elastic.{ESDoc, ElasticSearchClient, ElasticSearchDAO}
 import com.devcode.accountiq.settlement.sftp.SftpDownloader
 import com.devcode.accountiq.settlement.transformer.{CSVParser, XLSXParser}
+import com.devcode.accountiq.settlement.util.FileUtil
 import zio._
 import zio.config.typesafe.TypesafeConfigProvider
 import com.sksamuel.elastic4s.{ElasticClient => ESClient}
@@ -28,6 +29,12 @@ object Main extends ZIOAppDefault {
   private val elasticClient: ZLayer[Any, Config.Error, ESClient] = elasticConfig >>> ElasticSearchClient.live
   private val elasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[ESDoc]] = elasticClient >>> ElasticSearchDAO.live
 
+  private def createIndex() = for {
+    dao <- ZIO.service[ElasticSearchDAO[ESDoc]]
+    response <- dao.createIndices()
+    _ <- ZIO.logInfo(response.toString)
+  } yield ()
+
   private def addDocs(json: List[ESDoc]) = for {
     dao <- ZIO.service[ElasticSearchDAO[ESDoc]]
     response <- dao.addBulk(json)
@@ -41,12 +48,18 @@ object Main extends ZIOAppDefault {
 //      _          <- ZIO.logInfo("Starting HTTP server")
 //      _          <- Server.serve(routes.serverEndpoints)
 //      _ <- SftpDownloader.downloadAccount()
-      rows <- CSVParser.parse(new java.io.File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test.csv").toPath)
-      docs = ESDoc.parseESDocs(rows)
+//      rowsCSV <- CSVParser.parse(new java.io.File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test.csv").toPath)
+//      docs = ESDoc.parseESDocs(rowsCSV)
+//      _ <- addDocs(docs).provide(elasticDAO)
+
+//      _ <- createIndex().provide(elasticDAO)
+      path = new File("/Users/white/Desktop/test2.xlsx").toPath
+      fileId <- FileUtil.getFileNamePart(path.toString)
+      rowsXLSX <- XLSXParser.parse(path).tap(rows => ZIO.foreach(rows)(row=> ZIO.logInfo(row.mkString(","))))
+      docs = ESDoc.parseESDocs(rowsXLSX, fileId)
+      _ <- ZIO.logInfo(docs.mkString(","))
       _ <- addDocs(docs).provide(elasticDAO)
 
-//      chunks <- CSVParser.parse(new java.io.File("/Users/white/Desktop/win/Winbet_Deposit_31032023.csv").toPath)
-//      xlsx <- XLSXParser.parse(new File("/Users/white/Desktop/Settlement_Reconciliation_Belgium.xlsx").toPath).tap(rows => ZIO.foreach(rows)(row=> ZIO.logInfo(row.mkString(","))))
     } yield ())
 
 

@@ -1,6 +1,7 @@
 package com.devcode.accountiq.settlement.util
 
 import java.nio.file.Paths
+import zio._
 
 object FileUtil {
   /**
@@ -16,10 +17,10 @@ object FileUtil {
 
   private val PathWithFilePattern = """^\/?(?:[^\/]+\/)*([^\/]+)$""".r
 
-  def getFileNamePart(path: String): Option[String] =
+  def getFileNamePart(path: String) =
     path match {
-      case PathWithFilePattern(fileName) => Some(fileName)
-      case _ => None
+      case PathWithFilePattern(fileName) => ZIO.succeed(fileName)
+      case _ => ZIO.fail(new IllegalArgumentException(s"Can not extract filename from path $path"))
     }
 
 }

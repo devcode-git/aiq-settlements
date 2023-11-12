@@ -30,19 +30,13 @@ object SftpDownloader {
     if (ftpResource.isDirectory.getOrElse(false)) {
       return ZIO.logInfo(s"${ftpResource.path} is a directory, skipping...")
     }
-    (FileUtil.getFileNamePart(path) map {
+    FileUtil.getFileNamePart(path) flatMap {
       case ignoredFileName if !ignoredFileName.matches(configuration.fileMask) =>
         ZIO.logInfo(s"$ignoredFileName isn't configured to be downloaded, skipping...")
       case fileName if !FileUtil.fileDownloaded(directory, fileName) || configuration.overrideFiles =>
         SFtp.readFile(path).run(ZSink.fromFileName(s"$directory/$fileName")).flatMap(_ => ZIO.logInfo(s"File downloaded $directory/$fileName"))
       case alreadyDownloadedFileName =>
         ZIO.logInfo(s"$alreadyDownloadedFileName already downloaded, skipping...")
-    }).getOrElse {
-      if (configuration.ignoreDownloadErrors) {
-        ZIO.logWarning(s"Could not extract filename from $path")
-      } else {
-        ZIO.logError(s"Could not extract filename from $path") *> ZIO.fail(new RuntimeException(s"Could not extract filename from $path"))
-      }
     }
   }
 

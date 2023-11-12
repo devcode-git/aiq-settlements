@@ -51,12 +51,13 @@ case class ESDoc(doc: Map[String, String])
 
 object ESDoc {
   implicit val formatter: Indexable[ESDoc] = (t: ESDoc) => t.doc.toJson
+  val fileIdField = "processedFileId"
 
-  def parseESDocs(rows: List[List[String]]) = {
+  def parseESDocs(rows: List[List[String]], fileId: String): List[ESDoc] = {
     rows match {
       case _ :: Nil => List()
       case Nil => List()
-      case headerRow :: dataRows => dataRows.map(row => headerRow.zip(row)).map(_.toMap).map(ESDoc(_))
+      case headerRow :: dataRows => dataRows.map(row => headerRow.zip(row)).map(_.toMap).map(_ + (fileIdField -> fileId)).map(ESDoc(_))
     }
   }
 }
