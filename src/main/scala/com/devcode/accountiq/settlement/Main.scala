@@ -1,5 +1,5 @@
 package com.devcode.accountiq.settlement
-import com.devcode.accountiq.settlement.elastic.{ESDoc, ElasticSearchClient, ElasticSearchDAO, SettlementDetailReport}
+import com.devcode.accountiq.settlement.elastic.{BatchSalesToPayoutReport, ESDoc, ElasticSearchClient, ElasticSearchDAO, SettlementDetailReport}
 import com.devcode.accountiq.settlement.sftp.SftpDownloader
 import com.devcode.accountiq.settlement.transformer.{CSVParser, XLSXParser}
 import com.devcode.accountiq.settlement.util.FileUtil
@@ -53,11 +53,22 @@ object Main extends ZIOAppDefault {
 //      _ <- addDocs(docs).provide(elasticDAO)
 
 //      _ <- createIndex().provide(elasticDAO)
-      path = new File("/Users/white/Desktop/test2.xlsx").toPath
+
+//      STEP3: PARSE SETTLEMENT REPORT FILE
+      path = new File("/Users/white/Desktop/test-SettlementDetailReport.xlsx").toPath
       fileId <- FileUtil.getFileNamePart(path.toString)
       rowsXLSX <- XLSXParser.parse(path).tap(rows => ZIO.foreach(rows)(row=> ZIO.logInfo(row.mkString(","))))
       docs = ESDoc.parseESDocs(rowsXLSX, fileId).map(SettlementDetailReport.fromESDocRaw)
       _ <- ZIO.logInfo(docs.mkString(","))
+
+//    STEP3: PARSE BATCH REPORT FILE
+      path = new File("/Users/white/Desktop/test-BatchSalesToPayout.xlsx").toPath
+      fileId <- FileUtil.getFileNamePart(path.toString)
+      rowsXLSX <- XLSXParser.parse(path).tap(rows => ZIO.foreach(rows)(row => ZIO.logInfo(row.mkString(","))))
+      docs = ESDoc.parseESDocs(rowsXLSX, fileId).map(BatchSalesToPayoutReport.fromESDocRaw)
+      _ <- ZIO.logInfo(docs.mkString(","))
+
+//      STEP4: ADD TO ELASTIC SEARCH
 //      _ <- addDocs(docs).provide(elasticDAO)
 
     } yield ())

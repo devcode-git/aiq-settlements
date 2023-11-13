@@ -21,33 +21,62 @@ object BatchSalesToPayoutReportField extends Enumeration {
 }
 
 object BatchSalesToPayoutReport {
-  def fromESDocRaw(esDoc: ESDoc): BatchSalesToPayoutReport = {
+  def fromESDocRaw(esDoc: ESDoc): BatchSalesToPayoutReportRow = {
     val doc = esDoc.doc
-    BatchSalesToPayoutReport(
-      doc(BatchSalesToPayoutReportField.status),
-      doc(BatchSalesToPayoutReportField.sales).toLong,
-      doc(BatchSalesToPayoutReportField.refunds).toDouble,
-      doc(BatchSalesToPayoutReportField.salesRefund).toLong,
-      doc(BatchSalesToPayoutReportField.pending).toLong,
-      AIQParserUtil.dateFormat.parse(doc(BatchSalesToPayoutReportField.payoutDate)),
-      doc(BatchSalesToPayoutReportField.paymentMethod),
-      doc(BatchSalesToPayoutReportField.paymentMethodDescription),
-      doc(BatchSalesToPayoutReportField.salesCount).toLong,
-      doc(BatchSalesToPayoutReportField.refundCount).toLong
-    )
+    doc(BatchSalesToPayoutReportField.status) match {
+      case "summary" =>
+        BatchSalesToPayoutReportSummaryRow(
+          doc(BatchSalesToPayoutReportField.status),
+          doc(BatchSalesToPayoutReportField.sales).toDouble,
+          doc(BatchSalesToPayoutReportField.refunds).toDouble,
+          doc(BatchSalesToPayoutReportField.salesRefund).toDouble,
+          doc(BatchSalesToPayoutReportField.pending).toLong,
+          Option(doc(BatchSalesToPayoutReportField.payoutDate)).filter(_.nonEmpty).map( AIQParserUtil.dateFormat.parse),
+          Option(doc(BatchSalesToPayoutReportField.paymentMethod)).filter(_.nonEmpty),
+          Option(doc(BatchSalesToPayoutReportField.paymentMethodDescription)).filter(_.nonEmpty),
+          doc(BatchSalesToPayoutReportField.salesCount).toLong,
+          doc(BatchSalesToPayoutReportField.refundCount).toLong
+        )
+      case status =>
+        BatchSalesToPayoutPaidOutReport(
+          status,
+          doc(BatchSalesToPayoutReportField.sales).toDouble,
+          doc(BatchSalesToPayoutReportField.refunds).toDouble,
+          doc(BatchSalesToPayoutReportField.salesRefund).toDouble,
+          doc(BatchSalesToPayoutReportField.pending).toLong,
+          AIQParserUtil.dateFormat.parse(doc(BatchSalesToPayoutReportField.payoutDate)),
+          doc(BatchSalesToPayoutReportField.paymentMethod),
+          doc(BatchSalesToPayoutReportField.paymentMethodDescription),
+          doc(BatchSalesToPayoutReportField.salesCount).toLong,
+          doc(BatchSalesToPayoutReportField.refundCount).toLong
+        )
+    }
+
   }
 }
 
-case class BatchSalesToPayoutReport(status: String,
-                                  sales: Long,
+trait BatchSalesToPayoutReportRow
+case class BatchSalesToPayoutReportSummaryRow(status: String,
+                                    sales: Double,
+                                    refunds: Double,
+                                    salesRefund: Double,
+                                    pending: Long,
+                                    payoutDate: Option[Date],
+                                    paymentMethod: Option[String],
+                                    paymentMethodDescription: Option[String],
+                                    salesCount: Long,
+                                    refundCount: Long) extends BatchSalesToPayoutReportRow
+
+case class BatchSalesToPayoutPaidOutReport(status: String,
+                                  sales: Double,
                                   refunds: Double,
-                                  salesRefund: Long,
+                                  salesRefund: Double,
                                   pending: Long,
                                   payoutDate: Date,
                                   paymentMethod: String,
                                   paymentMethodDescription: String,
                                   salesCount: Long,
-                                  refundCount: Long)
+                                  refundCount: Long) extends BatchSalesToPayoutReportRow
 
 //  val batchSalesToPayoutReportMapping: Map[String, EntercashField.Value] = Map(
 //    "Status" -> EntercashField.String,
