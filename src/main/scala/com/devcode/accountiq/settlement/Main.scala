@@ -1,5 +1,8 @@
 package com.devcode.accountiq.settlement
-import com.devcode.accountiq.settlement.elastic.{BatchSalesToPayoutReport, ESDoc, ElasticSearchClient, ElasticSearchDAO, SettlementDetailReport}
+
+import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReport
+import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReport
+import com.devcode.accountiq.settlement.elastic.{ESDoc, ElasticSearchClient, ElasticSearchDAO}
 import com.devcode.accountiq.settlement.sftp.SftpDownloader
 import com.devcode.accountiq.settlement.transformer.{CSVParser, XLSXParser}
 import com.devcode.accountiq.settlement.util.FileUtil
