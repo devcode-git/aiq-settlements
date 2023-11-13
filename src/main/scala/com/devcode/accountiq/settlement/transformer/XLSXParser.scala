@@ -1,11 +1,11 @@
 package com.devcode.accountiq.settlement.transformer
 
 import org.apache.poi.ss.usermodel.{CellType, DateUtil, WorkbookFactory}
+import zio._
 
 import java.io.FileInputStream
 import java.nio.file.Path
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
-import zio._
 
 object XLSXParser {
 
@@ -18,7 +18,7 @@ object XLSXParser {
         Some(sheet.getRow(i))
       catch {
         case ex: Throwable =>
-//          log.error(s"failed to parse row: $i ", ex);
+          //          log.error(s"failed to parse row: $i ", ex);
           None
       }).flatten.map(row => row.cellIterator().asScala.toList.map { cell =>
       cell.getCellTypeEnum match {

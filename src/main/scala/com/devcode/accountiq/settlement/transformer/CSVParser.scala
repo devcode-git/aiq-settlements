@@ -1,10 +1,9 @@
 package com.devcode.accountiq.settlement.transformer
 
-import com.devcode.accountiq.settlement.elastic.ESDoc
-
-import java.nio.file.Path
 import com.github.tototoshi.csv._
 import zio.stream.ZStream
+
+import java.nio.file.Path
 
 object CSVParser {
 

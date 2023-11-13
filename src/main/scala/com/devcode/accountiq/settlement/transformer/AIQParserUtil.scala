@@ -13,12 +13,4 @@ object AIQParserUtil {
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
 
-//  object EntercashField extends Enumeration {
-//    type EntercashField = Value
-//    val String = Value("STRING")
-//    val Double = Value("DOUBLE")
-//    val Long = Value("LONG")
-//    val Date = Value("DATE")
-//  }
-
 }
