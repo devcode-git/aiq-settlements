@@ -18,6 +18,7 @@ final case class Local(host: String, port: Int)
 
 object ElasticConfig {
   val config: Config[ElasticConfig] = deriveConfig[ElasticConfig].nested("ElasticConfig")
+  val live = ZLayer.fromZIO(ZIO.config[ElasticConfig](ElasticConfig.config))
 }
 
 package object config {

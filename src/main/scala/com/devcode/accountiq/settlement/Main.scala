@@ -4,6 +4,7 @@ import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayout
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReport
 import com.devcode.accountiq.settlement.elastic.{ESDoc, ElasticSearchClient, ElasticSearchDAO}
 import com.devcode.accountiq.settlement.sftp.SftpDownloader
+import com.devcode.accountiq.settlement.sftp.SftpDownloader.SFTPAccount
 import com.devcode.accountiq.settlement.transformer.{CSVParser, XLSXParser}
 import com.devcode.accountiq.settlement.util.FileUtil
 import zio._
@@ -23,14 +24,18 @@ object Main extends ZIOAppDefault {
         .fromResourcePath()
     )
 
-  private val elasticConfig: ZLayer[Any, Config.Error, ElasticConfig] =
-    ZLayer
-      .fromZIO(
-        ZIO.config[ElasticConfig](ElasticConfig.config)
-      )
-
-  private val elasticClient: ZLayer[Any, Config.Error, ESClient] = elasticConfig >>> ElasticSearchClient.live
-  private val elasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[ESDoc]] = elasticClient >>> ElasticSearchDAO.live
+  private val elasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[ESDoc]] = ZLayer.make[ElasticSearchDAO[ESDoc]](
+    ElasticSearchClient.live,
+    ElasticSearchDAO.live,
+    ElasticConfig.live
+  )
+  private val sftpAccount: ZLayer[Any, Nothing, SFTPAccount] = ZLayer.succeed(SFTPAccount(
+    "s-050dbb81072240e89.server.transfer.eu-west-1.amazonaws.com",
+    22,
+    "fastpay_aiq",
+    "b5dd33d9995cc68c4908910488869636",
+    "home/upload",
+    "/Users/white/Desktop/win"))
 
   private def createIndex() = for {
     dao <- ZIO.service[ElasticSearchDAO[ESDoc]]
@@ -50,29 +55,26 @@ object Main extends ZIOAppDefault {
 //      routes     <- ZIO.service[Routes]
 //      _          <- ZIO.logInfo("Starting HTTP server")
 //      _          <- Server.serve(routes.serverEndpoints)
-//      _ <- SftpDownloader.downloadAccount()
-//      rowsCSV <- CSVParser.parse(new java.io.File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test.csv").toPath)
-//      docs = ESDoc.parseESDocs(rowsCSV)
-//      _ <- addDocs(docs).provide(elasticDAO)
-
+//      _ <- SftpDownloader.downloadAccount().provideLayer(sftpAccount)
 //      _ <- createIndex().provide(elasticDAO)
 
 //      STEP3: PARSE SETTLEMENT REPORT FILE
-      path = new File("/Users/white/Desktop/test-SettlementDetailReport.xlsx").toPath
-      fileId <- FileUtil.getFileNamePart(path.toString)
-      rowsXLSX <- XLSXParser.parse(path).tap(rows => ZIO.foreach(rows)(row=> ZIO.logInfo(row.mkString(","))))
-      docs = ESDoc.parseESDocs(rowsXLSX, fileId).map(SettlementDetailReport.fromESDocRaw)
-      _ <- ZIO.logInfo(docs.mkString(","))
+//      path = new File("/Users/white/Desktop/test-SettlementDetailReport.xlsx").toPath
+//      fileId <- FileUtil.getFileNamePart(path.toString)
+//      rowsXLSX <- XLSXParser.parse(path).tap(rows => ZIO.foreach(rows)(row=> ZIO.logInfo(row.mkString(","))))
+//      docs = ESDoc.parseESDocs(rowsXLSX, fileId).map(SettlementDetailReport.fromESDocRaw)
+//      _ <- ZIO.logInfo(docs.mkString(","))
 
 //    STEP3: PARSE BATCH REPORT FILE
-      path = new File("/Users/white/Desktop/test-BatchSalesToPayout.xlsx").toPath
+      path = new File("/Users/white/Desktop/reports/test-BatchSalesToPayout.xlsx").toPath
       fileId <- FileUtil.getFileNamePart(path.toString)
       rowsXLSX <- XLSXParser.parse(path).tap(rows => ZIO.foreach(rows)(row => ZIO.logInfo(row.mkString(","))))
-      docs = ESDoc.parseESDocs(rowsXLSX, fileId).map(BatchSalesToPayoutReport.fromESDocRaw)
-      _ <- ZIO.logInfo(docs.mkString(","))
+      docs = ESDoc.parseESDocs(rowsXLSX, fileId)
+//      docs = ESDoc.parseESDocs(rowsXLSX, fileId).map(BatchSalesToPayoutReport.fromESDocRaw)
+//      _ <- ZIO.logInfo(docs.mkString(","))
 
 //      STEP4: ADD TO ELASTIC SEARCH
-//      _ <- addDocs(docs).provide(elasticDAO)
+      _ <- addDocs(docs).provide(elasticDAO)
 
     } yield ())
 
