@@ -5,11 +5,19 @@ import zio._
 
 import java.io.FileInputStream
 import java.nio.file.Path
+import java.text.{DecimalFormat, DecimalFormatSymbols, SimpleDateFormat}
+import java.util.Locale
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
 
 object XLSXParser {
 
-  def parse(path: Path): ZIO[Any, Nothing, List[List[String]]] = {
+  // this is the best way how to convert doubles to strings and avoid values like 1.07794593E8 and etc
+  // for example: 12345678D.toString returns 1.2345678E7
+  // the solution from https://stackoverflow.com/a/25307973
+  val doubleFormat = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH))
+  doubleFormat.setMaximumFractionDigits(340) // 340 = DecimalFormat.DOUBLE_FRACTION_DIGITS
+
+  def parse(path: Path, dateFormat: SimpleDateFormat): ZIO[Any, Nothing, List[List[String]]] = {
     val wb = WorkbookFactory.create(new FileInputStream(path.toFile))
     val sheet = wb.getSheetAt(0)
     println(s" total row= ${sheet.getLastRowNum}")
@@ -25,9 +33,9 @@ object XLSXParser {
         case CellType._NONE => ""
         case CellType.NUMERIC =>
           if (DateUtil.isCellDateFormatted(cell)) {
-            AIQParserUtil.dateFormat.format(cell.getDateCellValue)
+            dateFormat.format(cell.getDateCellValue)
           } else {
-            AIQParserUtil.doubleFormat.format(cell.getNumericCellValue)
+            doubleFormat.format(cell.getNumericCellValue)
           }
         case CellType.STRING => cell.getStringCellValue
         case CellType.FORMULA => cell.getCellFormula

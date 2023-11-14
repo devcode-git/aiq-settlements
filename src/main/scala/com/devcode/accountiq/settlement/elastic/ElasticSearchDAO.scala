@@ -1,5 +1,7 @@
 package com.devcode.accountiq.settlement.elastic
 
+import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
+import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
 import com.sksamuel.elastic4s.{ElasticClient, Indexable}
 import com.sksamuel.elastic4s.ElasticDsl._
 import com.sksamuel.elastic4s.zio.instances._
@@ -65,10 +67,22 @@ object ESDoc {
 
 object ElasticSearchDAO {
 
-  val live: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[ESDoc]] = ZLayer.fromFunction(create _)
+  val liveESDoc: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[ESDoc]] = ZLayer.fromFunction(create _)
 
   def create(client: ElasticClient): ElasticSearchDAO[ESDoc] = {
     new ElasticSearchDAO[ESDoc](client)
+  }
+
+  val liveBatchSalesToPayout: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[BatchSalesToPayoutReportRow]] = ZLayer.fromFunction(createBatchSalesToPayout _)
+
+  def createBatchSalesToPayout(client: ElasticClient): ElasticSearchDAO[BatchSalesToPayoutReportRow] = {
+    new ElasticSearchDAO[BatchSalesToPayoutReportRow](client)
+  }
+
+  val liveSettlementDetail: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[SettlementDetailReportRow]] = ZLayer.fromFunction(createSettlementDetail _)
+
+  def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReportRow] = {
+    new ElasticSearchDAO[SettlementDetailReportRow](client)
   }
 
 }
