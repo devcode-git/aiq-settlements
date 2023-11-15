@@ -28,9 +28,9 @@ object SftpDownloader {
       case ignoredFileName if !ignoredFileName.matches(sftpAccount.fileMask) =>
         ZIO.logInfo(s"$ignoredFileName isn't configured to be downloaded, skipping...")
       case fileName if !FileUtil.fileDownloaded(sftpAccount.destinationDirectory, fileName) || sftpAccount.overrideFiles =>
-        ZIO.scoped(ZIO.logInfo(s"File to download: ${sftpAccount.destinationDirectory}/$fileName") *>
+        ZIO.logInfo(s"File to download: ${sftpAccount.destinationDirectory}/$fileName") *>
           SFtp.readFile(path).run(ZSink.fromFileName(s"${sftpAccount.destinationDirectory}/$fileName")) *>
-          ZIO.logInfo(s"File downloaded ${sftpAccount.destinationDirectory}/$fileName"))
+          ZIO.logInfo(s"File downloaded ${sftpAccount.destinationDirectory}/$fileName")
       case alreadyDownloadedFileName =>
         ZIO.logInfo(s"$alreadyDownloadedFileName already downloaded, skipping...")
     }
