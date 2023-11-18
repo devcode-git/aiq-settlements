@@ -66,10 +66,15 @@ object Main extends ZIOAppDefault {
 //      _ <- SftpDownloader.downloadAccount().provideLayer(sftpAccount)
 //      _ <- createIndex().provide(elasticDAO)
 
-      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv").toPath
-      batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
-      esDocs <- TransformService.saveRaw(batchPath).provide(esDocsElasticDAO)
-      batchReports <- TransformService.saveBatchSalesToPayoutReport(esDocs).provide(batchReportsElasticDAO)
+
+//      batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
+//      esDocs <- TransformService.saveRaw(batchPath).provide(esDocsElasticDAO)
+//      batchReports <- TransformService.saveBatchSalesToPayoutReport(esDocs).provide(batchReportsElasticDAO)
+//      _ <- ZIO.logInfo(batchReports.mkString(","))
+
+      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
+      esDocs <- TransformService.saveRaw(settlementPath).provide(esDocsElasticDAO)
+      batchReports <- TransformService.settlementDetailReport(esDocs).provide(settlementReportsElasticDAO)
       _ <- ZIO.logInfo(batchReports.mkString(","))
 
     } yield ())

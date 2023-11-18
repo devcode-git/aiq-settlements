@@ -13,12 +13,11 @@ import scala.concurrent.ExecutionContext
 import com.sksamuel.elastic4s.ElasticDsl._
 
 
-class ElasticSearchDAO[T: Indexable](client: ElasticClient) {
+class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String) {
 
   implicit lazy val global = ExecutionContext.fromExecutorService(
     Executors.newWorkStealingPool(10)
   )
-  val indexName = "test_settlement_merchant_reports"
 
   def findAll() = {
     val limit = 100
@@ -54,7 +53,7 @@ case class ESDoc(doc: Map[String, String])
 
 object ESDoc {
   implicit val formatter: Indexable[ESDoc] = (t: ESDoc) => t.doc.toJson
-  val fileIdField = "processedFileId"
+  val fileIdField = "AIQ_Filename"
 
   def parseESDocs(rows: List[List[String]], fileId: String): List[ESDoc] = {
     rows match {
@@ -70,19 +69,22 @@ object ElasticSearchDAO {
   val liveESDoc: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[ESDoc]] = ZLayer.fromFunction(create _)
 
   def create(client: ElasticClient): ElasticSearchDAO[ESDoc] = {
-    new ElasticSearchDAO[ESDoc](client)
+    val indexName = "raw_settlement_merchant_reports"
+    new ElasticSearchDAO[ESDoc](client, indexName)
   }
 
   val liveBatchSalesToPayout: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[BatchSalesToPayoutReportRow]] = ZLayer.fromFunction(createBatchSalesToPayout _)
 
   def createBatchSalesToPayout(client: ElasticClient): ElasticSearchDAO[BatchSalesToPayoutReportRow] = {
-    new ElasticSearchDAO[BatchSalesToPayoutReportRow](client)
+    val indexName = "batch_settlement_merchant_reports"
+    new ElasticSearchDAO[BatchSalesToPayoutReportRow](client, indexName)
   }
 
   val liveSettlementDetail: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[SettlementDetailReportRow]] = ZLayer.fromFunction(createSettlementDetail _)
 
   def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReportRow] = {
-    new ElasticSearchDAO[SettlementDetailReportRow](client)
+    val indexName = "detail_settlement_merchant_reports"
+    new ElasticSearchDAO[SettlementDetailReportRow](client, indexName)
   }
 
 }
