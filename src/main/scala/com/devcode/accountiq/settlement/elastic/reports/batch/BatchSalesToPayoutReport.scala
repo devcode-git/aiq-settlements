@@ -1,11 +1,13 @@
 package com.devcode.accountiq.settlement.elastic.reports.batch
 
 import com.devcode.accountiq.settlement.elastic.ESDoc
+import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.Indexable
 import zio.json.internal.{RetractReader, Write}
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder, JsonError}
 
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.Date
 
 trait BatchSalesToPayoutReportRow
@@ -15,7 +17,7 @@ case class BatchSalesToPayoutReportSummaryRow(status: String,
                                               refunds: Double,
                                               salesRefund: Double,
                                               pending: Double,
-                                              payoutDateTimestamp: Option[Long],
+                                              payoutDate: Option[LocalDate],
                                               paymentMethod: Option[String],
                                               paymentMethodDescription: Option[String],
                                               salesCount: Long,
@@ -34,7 +36,7 @@ case class BatchSalesToPayoutPaidOutReportRow(status: String,
                                               refunds: Double,
                                               salesRefund: Double,
                                               pending: Long,
-                                              payoutDateTimestamp: Long,
+                                              payoutDate: LocalDate,
                                               paymentMethod: String,
                                               paymentMethodDescription: String,
                                               salesCount: Long,
@@ -69,7 +71,7 @@ object BatchSalesToPayoutReportRow {
           doc(BatchSalesToPayoutReportField.refunds).toDouble,
           doc(BatchSalesToPayoutReportField.salesRefund).toDouble,
           doc(BatchSalesToPayoutReportField.pending).toDouble,
-          Option(doc(BatchSalesToPayoutReportField.payoutDate)).filter(_.nonEmpty).map(dateFormat.parse).map(_.getTime),
+          Option(doc(BatchSalesToPayoutReportField.payoutDate)).filter(_.nonEmpty).map(dateFormat.parse).map(_.toLocalDate),
           Option(doc(BatchSalesToPayoutReportField.paymentMethod)).filter(_.nonEmpty),
           Option(doc(BatchSalesToPayoutReportField.paymentMethodDescription)).filter(_.nonEmpty),
           doc(BatchSalesToPayoutReportField.salesCount).toLong,
@@ -82,7 +84,7 @@ object BatchSalesToPayoutReportRow {
           doc(BatchSalesToPayoutReportField.refunds).toDouble,
           doc(BatchSalesToPayoutReportField.salesRefund).toDouble,
           doc(BatchSalesToPayoutReportField.pending).toLong,
-          dateFormat.parse(doc(BatchSalesToPayoutReportField.payoutDate)).getTime,
+          dateFormat.parse(doc(BatchSalesToPayoutReportField.payoutDate)).toLocalDate,
           doc(BatchSalesToPayoutReportField.paymentMethod),
           doc(BatchSalesToPayoutReportField.paymentMethodDescription),
           doc(BatchSalesToPayoutReportField.salesCount).toLong,

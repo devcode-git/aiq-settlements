@@ -1,17 +1,19 @@
 package com.devcode.accountiq.settlement.elastic.reports.settlement
 
 import com.devcode.accountiq.settlement.elastic.ESDoc
+import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.Indexable
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
 
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 
 case class SettlementDetailReportRow(companyAccount: String,
                                      merchantAccount: String,
                                      pspReference: String,
                                      merchantReference: Long,
                                      paymentMethod: String,
-                                     creationDateTimestamp: Long,
+                                     creationDate: LocalDate,
                                      timeZone: String,
                                      `type`: String,
                                      modificationReference: String,
@@ -53,7 +55,7 @@ object SettlementDetailReportRow {
       doc(SettlementDetailReportField.pspReference),
       doc(SettlementDetailReportField.merchantReference).toLong,
       doc(SettlementDetailReportField.paymentMethod),
-      dateFormat.parse(doc(SettlementDetailReportField.creationDate)).getTime,
+      dateFormat.parse(doc(SettlementDetailReportField.creationDate)).toLocalDate,
       doc(SettlementDetailReportField.timeZone),
       doc(SettlementDetailReportField.`type`),
       doc(SettlementDetailReportField.modificationReference),

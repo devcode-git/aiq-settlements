@@ -1,10 +1,12 @@
 package com.devcode.accountiq.settlement.elastic.reports.merchant
 
 import com.devcode.accountiq.settlement.elastic.ESDoc
+import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.Indexable
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
 
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 
 case class MerchantPaymentTransactionsReportRow(
                                     operator: String,
@@ -12,8 +14,8 @@ case class MerchantPaymentTransactionsReportRow(
                                     txRef: Long,
                                     txId: Option[Long],
                                     providerRef: Option[Long],
-                                    createdTimestamp: Long,
-                                    bookedTimestamp: Long,
+                                    created: LocalDate,
+                                    booked: LocalDate,
                                     amount: String,
                                     amountBase: String,
                                     txAmount: Option[String],
@@ -47,8 +49,8 @@ object MerchantPaymentTransactionsReportRow {
         doc(MerchantPaymentTransactionsReportField.txRef).toLong,
         Option(doc(MerchantPaymentTransactionsReportField.txId)).filter(_.nonEmpty).map(_.toLong),
         Option(doc(MerchantPaymentTransactionsReportField.providerRef)).filter(_.nonEmpty).map(_.toLong),
-        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.created)).getTime,
-        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.booked)).getTime,
+        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.created)).toLocalDate,
+        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.booked)).toLocalDate,
         doc(MerchantPaymentTransactionsReportField.amount),
         doc(MerchantPaymentTransactionsReportField.amountBase),
         Option(doc(MerchantPaymentTransactionsReportField.txAmount)).filter(_.nonEmpty),

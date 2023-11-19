@@ -43,7 +43,7 @@ object TransformService {
     fileId <- FileUtil.getFileNamePart(file.getPath)
     rows <- CSVParser.parse(file.toPath)
     esdocs = ESDoc.parseESDocs(rows, fileId)
-    _ <- saveESDocs(esdocs)
+//    _ <- saveESDocs(esdocs)
   } yield esdocs
 
 
