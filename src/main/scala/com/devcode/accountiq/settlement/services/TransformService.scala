@@ -1,6 +1,7 @@
 package com.devcode.accountiq.settlement.services
 
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
+import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
 import com.devcode.accountiq.settlement.elastic.{ESDoc, ElasticSearchDAO}
 import com.devcode.accountiq.settlement.transformer.CSVParser
@@ -24,6 +25,15 @@ object TransformService {
     val settlementReports = esdocs.map(SettlementDetailReportRow.fromESDocRaw)
     for {
       dao <- ZIO.service[ElasticSearchDAO[SettlementDetailReportRow]]
+      response <- dao.addBulk(settlementReports)
+      _ <- ZIO.logDebug(response.toString)
+    } yield settlementReports
+  }
+
+  def saveMerchantPaymentTransactions(esdocs: List[ESDoc]): ZIO[ElasticSearchDAO[MerchantPaymentTransactionsReportRow], Throwable, List[MerchantPaymentTransactionsReportRow]] = {
+    val settlementReports = esdocs.map(MerchantPaymentTransactionsReportRow.fromESDocRaw)
+    for {
+      dao <- ZIO.service[ElasticSearchDAO[MerchantPaymentTransactionsReportRow]]
       response <- dao.addBulk(settlementReports)
       _ <- ZIO.logDebug(response.toString)
     } yield settlementReports

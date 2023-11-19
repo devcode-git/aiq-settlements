@@ -1,6 +1,7 @@
 package com.devcode.accountiq.settlement
 
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
+import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
 import com.devcode.accountiq.settlement.elastic.{ESDoc, ElasticSearchClient, ElasticSearchDAO}
 import com.devcode.accountiq.settlement.services.TransformService
@@ -43,6 +44,12 @@ object Main extends ZIOAppDefault {
     ElasticConfig.live
   )
 
+  private val merchantPaymentTransactionsReportsElasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[MerchantPaymentTransactionsReportRow]] = ZLayer.make[ElasticSearchDAO[MerchantPaymentTransactionsReportRow]](
+    ElasticSearchClient.live,
+    ElasticSearchDAO.liveMerchantPaymentTransactions,
+    ElasticConfig.live
+  )
+
   private val sftpAccount: ZLayer[Any, Nothing, SFTPAccount] = ZLayer.succeed(SFTPAccount(
     "s-050dbb81072240e89.server.transfer.eu-west-1.amazonaws.com",
     22,
@@ -72,10 +79,15 @@ object Main extends ZIOAppDefault {
 //      batchReports <- TransformService.saveBatchSalesToPayoutReport(esDocs).provide(batchReportsElasticDAO)
 //      _ <- ZIO.logInfo(batchReports.mkString(","))
 
-      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
-      esDocs <- TransformService.saveRaw(settlementPath).provide(esDocsElasticDAO)
-      batchReports <- TransformService.settlementDetailReport(esDocs).provide(settlementReportsElasticDAO)
-      _ <- ZIO.logInfo(batchReports.mkString(","))
+//      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
+//      esDocs <- TransformService.saveRaw(settlementPath).provide(esDocsElasticDAO)
+//      batchReports <- TransformService.settlementDetailReport(esDocs).provide(settlementReportsElasticDAO)
+//      _ <- ZIO.logInfo(batchReports.mkString(","))
+
+      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
+      esDocs <- TransformService.saveRaw(merchantPaymentTransactions).provide(esDocsElasticDAO)
+      reports <- TransformService.saveMerchantPaymentTransactions(esDocs).provide(merchantPaymentTransactionsReportsElasticDAO)
+      _ <- ZIO.logInfo(reports.mkString(","))
 
     } yield ())
 

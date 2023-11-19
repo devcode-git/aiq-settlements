@@ -1,6 +1,7 @@
 package com.devcode.accountiq.settlement.elastic
 
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
+import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
 import com.sksamuel.elastic4s.{ElasticClient, Indexable}
 import com.sksamuel.elastic4s.ElasticDsl._
@@ -85,6 +86,13 @@ object ElasticSearchDAO {
   def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReportRow] = {
     val indexName = "detail_settlement_merchant_reports"
     new ElasticSearchDAO[SettlementDetailReportRow](client, indexName)
+  }
+
+  val liveMerchantPaymentTransactions: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[MerchantPaymentTransactionsReportRow]] = ZLayer.fromFunction(createMerchantPaymentTransactions _)
+
+  def createMerchantPaymentTransactions(client: ElasticClient): ElasticSearchDAO[MerchantPaymentTransactionsReportRow] = {
+    val indexName = "merchant_payment_transactions_reports"
+    new ElasticSearchDAO[MerchantPaymentTransactionsReportRow](client, indexName)
   }
 
 }
