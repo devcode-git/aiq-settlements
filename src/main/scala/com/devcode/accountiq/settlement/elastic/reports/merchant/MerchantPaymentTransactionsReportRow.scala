@@ -4,6 +4,8 @@ import com.devcode.accountiq.settlement.elastic.ESDoc
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.Indexable
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
+import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
+import com.sksamuel.elastic4s.ElasticDsl.keywordField
 
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -28,6 +30,26 @@ case class MerchantPaymentTransactionsReportRow(
                                     jurisdiction: String)
 
 object MerchantPaymentTransactionsReportRow {
+
+  val mapping = properties(
+    keywordField("operator"),
+    keywordField("provider"),
+    keywordField("txRef"),
+    keywordField("txId"),
+    keywordField("providerRef"),
+    dateField("created"),
+    dateField("booked"),
+    keywordField("amount"),
+    keywordField("amountBase"),
+    keywordField("txAmount"),
+    keywordField("txAmountBase"),
+    keywordField("fee"),
+    keywordField("feeBase"),
+    keywordField("method"),
+    keywordField("txType"),
+    keywordField("userId"),
+    keywordField("jurisdiction")
+  )
 
   implicit val decoder: JsonDecoder[MerchantPaymentTransactionsReportRow] =
     DeriveJsonDecoder.gen[MerchantPaymentTransactionsReportRow]

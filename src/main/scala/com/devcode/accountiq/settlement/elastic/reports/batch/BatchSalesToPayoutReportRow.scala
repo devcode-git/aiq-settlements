@@ -2,6 +2,8 @@ package com.devcode.accountiq.settlement.elastic.reports.batch
 
 import com.devcode.accountiq.settlement.elastic.ESDoc
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
+import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
+import com.sksamuel.elastic4s.ElasticDsl.keywordField
 import com.sksamuel.elastic4s.Indexable
 import zio.json.internal.{RetractReader, Write}
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder, JsonError}
@@ -51,6 +53,19 @@ object BatchSalesToPayoutPaidOutReportRow {
 
 
 object BatchSalesToPayoutReportRow {
+
+  val mapping = properties(
+    keywordField("status"),
+    keywordField("sales"),
+    keywordField("refunds"),
+    keywordField("salesRefund"),
+    keywordField("pending"),
+    dateField("payoutDate"),
+    keywordField("paymentMethod"),
+    keywordField("paymentMethodDescription"),
+    keywordField("salesCount"),
+    keywordField("refundCount")
+  )
 
   implicit val formatter: Indexable[BatchSalesToPayoutReportRow] = (t: BatchSalesToPayoutReportRow) => {
     t match {
