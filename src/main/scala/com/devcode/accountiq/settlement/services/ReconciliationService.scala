@@ -7,20 +7,32 @@ object ReconciliationService {
 
   def reconcileMerchantReports(merchantReports: List[MerchantPaymentTransactionsReportRow],
                                settlementDetailReport: List[SettlementDetailReportRow]) = {
-    merchantReports.partition { merchantReport =>
-      settlementDetailReport.find {
-        r => r.merchantReference == merchantReport.txRef
-      }.filter { r =>
+    val (settlementDetailMatchedReports, settlementDetailUnmatchedReports) = settlementDetailReport.partition { merchantReport =>
+      merchantReports.find {
+        r => r.txRef == merchantReport.merchantReference
+      }.exists { r =>
         //todo: check gross debit ?
         // merchantReport.amount is "10 EUR" or "23.75 RON"
         // settlement.grossCredit is 30 (usually is EURO) guess all adyen is eur
         // remove .toLong and use separate column
-        r.grossCredit == merchantReport.amount.toLong
+        r.amount.value == merchantReport.grossCredit
       }
-
     }
-    ???
+  }
 
+  def reconcileSettlementDetailReportToMerchantReportAmount(merchantReports: List[MerchantPaymentTransactionsReportRow],
+                                                            settlementDetailReport: List[SettlementDetailReportRow]) = {
+    // TODO: move it, are there nay other providers ?
+    val adyenProviderName = "Adyen payconiq Deposit"
+    val merchantAmount = merchantReports.filter(_.provider == adyenProviderName).reduce(_.amount.value + _.amount.value)
+    val settlementDetailAmount = settlementDetailReport.reduce((a, b) => a.grossCredit * a.exchangeRate + b.grossCredit * b.exchangeRate)
+  }
+
+  // Formula: (((Gross Settled Amount * Provider_Forex - Gross Settled Amount * AccountIQ_Forex) x100)/(Gross Settled Amount * Provider_Forex) < 5
+  def reconcileProviderForex(settlementDetailReport: List[SettlementDetailReportRow], accountIQExchangeRate: Double): Boolean = {
+    val grossCreditWithProviderForex = settlementDetailReport.reduce((a, b) => a.grossCredit * a.exchangeRate + b.grossCredit * b.exchangeRate)
+    val grossCreditWithAccountIQForex = settlementDetailReport.reduce((a, b) => a.grossCredit * accountIQExchangeRate + b.grossCredit * accountIQExchangeRate)
+    ((grossCreditWithProviderForex - grossCreditWithAccountIQForex) * 100)/(grossCreditWithProviderForex) < 5
   }
 
 }

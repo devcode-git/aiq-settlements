@@ -67,11 +67,9 @@ object BatchSalesToPayoutReportRow {
     keywordField("refundCount")
   )
 
-  implicit val formatter: Indexable[BatchSalesToPayoutReportRow] = (t: BatchSalesToPayoutReportRow) => {
-    t match {
-      case v: BatchSalesToPayoutReportSummaryRow => v.toJson
-      case v: BatchSalesToPayoutPaidOutReportRow => v.toJson
-    }
+  implicit val formatter: Indexable[BatchSalesToPayoutReportRow] = {
+    case v: BatchSalesToPayoutReportSummaryRow => v.toJson
+    case v: BatchSalesToPayoutPaidOutReportRow => v.toJson
   }
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")

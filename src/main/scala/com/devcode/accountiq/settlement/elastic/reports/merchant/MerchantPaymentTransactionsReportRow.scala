@@ -1,6 +1,6 @@
 package com.devcode.accountiq.settlement.elastic.reports.merchant
 
-import com.devcode.accountiq.settlement.elastic.ESDoc
+import com.devcode.accountiq.settlement.elastic.{ESDoc, Money}
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.Indexable
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
@@ -18,8 +18,8 @@ case class MerchantPaymentTransactionsReportRow(
                                     providerRef: Option[Long],
                                     created: LocalDate,
                                     booked: LocalDate,
-                                    amount: String,
-                                    amountBase: String,
+                                    amount: Money,
+                                    amountBase: Money,
                                     txAmount: Option[String],
                                     txAmountBase: Option[String],
                                     fee: String,
@@ -51,6 +51,12 @@ object MerchantPaymentTransactionsReportRow {
     keywordField("jurisdiction")
   )
 
+  implicit val decoderMoney: JsonDecoder[Money] =
+    DeriveJsonDecoder.gen[Money]
+
+  implicit val encoderMoney: JsonEncoder[Money] =
+    DeriveJsonEncoder.gen[Money]
+
   implicit val decoder: JsonDecoder[MerchantPaymentTransactionsReportRow] =
     DeriveJsonDecoder.gen[MerchantPaymentTransactionsReportRow]
 
@@ -73,8 +79,8 @@ object MerchantPaymentTransactionsReportRow {
         Option(doc(MerchantPaymentTransactionsReportField.providerRef)).filter(_.nonEmpty).map(_.toLong),
         dateFormat.parse(doc(MerchantPaymentTransactionsReportField.created)).toLocalDate,
         dateFormat.parse(doc(MerchantPaymentTransactionsReportField.booked)).toLocalDate,
-        doc(MerchantPaymentTransactionsReportField.amount),
-        doc(MerchantPaymentTransactionsReportField.amountBase),
+        Money.parse(doc(MerchantPaymentTransactionsReportField.amount)),
+        Money.parse(doc(MerchantPaymentTransactionsReportField.amountBase)),
         Option(doc(MerchantPaymentTransactionsReportField.txAmount)).filter(_.nonEmpty),
         Option(doc(MerchantPaymentTransactionsReportField.txAmountBase)).filter(_.nonEmpty),
         doc(MerchantPaymentTransactionsReportField.fee),
