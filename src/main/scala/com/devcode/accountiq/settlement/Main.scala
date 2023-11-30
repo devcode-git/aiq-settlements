@@ -14,6 +14,8 @@ import zio.config.typesafe.TypesafeConfigProvider
 import com.sksamuel.elastic4s.{ElasticClient => ESClient}
 import zio.json.ast.Json
 import zio.json._
+import com.devcode.accountiq.settlement.http.{Routes, ServerDependencies}
+import zio.http.Server
 
 import java.io.File
 import java.nio.file.Path
@@ -67,9 +69,9 @@ object Main extends ZIOAppDefault {
   def app: ZIO[Any, Throwable, Unit] =
     ZIO.scoped(for {
       _          <- ZIO.logInfo("Starting Application")
-//      routes     <- ZIO.service[Routes]
-//      _          <- ZIO.logInfo("Starting HTTP server")
-//      _          <- Server.serve(routes.serverEndpoints)
+      routes     <- ZIO.service[Routes]
+      _          <- ZIO.logInfo("Starting HTTP server")
+      _          <- Server.serve(routes.serverEndpoints)
 //      _ <- SftpDownloader.downloadAccount().provideLayer(sftpAccount)
 //      _ <- createIndex().provide(elasticDAO)
 
@@ -84,10 +86,10 @@ object Main extends ZIOAppDefault {
 //      batchReports <- TransformService.settlementDetailReport(esDocs).provide(settlementReportsElasticDAO)
 //      _ <- ZIO.logInfo(batchReports.mkString(","))
 
-      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
-      esDocs <- TransformService.saveRaw(merchantPaymentTransactions).provide(esDocsElasticDAO)
-      reports <- TransformService.saveMerchantPaymentTransactions(esDocs).provide(merchantPaymentTransactionsReportsElasticDAO)
-      _ <- ZIO.logInfo(reports.mkString(","))
+//      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
+//      esDocs <- TransformService.saveRaw(merchantPaymentTransactions).provide(esDocsElasticDAO)
+//      reports <- TransformService.saveMerchantPaymentTransactions(esDocs).provide(merchantPaymentTransactionsReportsElasticDAO)
+//      _ <- ZIO.logInfo(reports.mkString(","))
 
     } yield ())
 
