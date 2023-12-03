@@ -1,15 +1,17 @@
 package com.devcode.accountiq.settlement.services
 
+import com.devcode.accountiq.settlement.elastic.ElasticSearchDAO
+import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
-import com.devcode.accountiq.settlement.recoonciliation.ReconcileCmd
+import com.devcode.accountiq.settlement.recoonciliation.{ReconTimeFrame, ReconcileCmd}
 import zio._
 
 object ReconciliationService {
 
   def reconcile(reconcileCmd: ReconcileCmd) = {
 
-    ZIO.succeed(s"merchant is ${reconcileCmd.merchantId}, provider is ${reconcileCmd.providerId}, tf is ${reconcileCmd.timeFrame.toString}}")
+    ZIO.succeed(s"merchant is ${reconcileCmd.merchant}, provider is ${reconcileCmd.provider}, tf is ${reconcileCmd.timeFrame.toString}}")
   }
 
   def reconcileMerchantReports(merchantReports: List[MerchantPaymentTransactionsReportRow],
@@ -41,6 +43,14 @@ object ReconciliationService {
 //    val grossCreditWithProviderForex = settlementDetailReport.reduce((a, b) => a.grossCredit * a.exchangeRate + b.grossCredit * b.exchangeRate)
 //    val grossCreditWithAccountIQForex = settlementDetailReport.reduce((a, b) => a.grossCredit * accountIQExchangeRate + b.grossCredit * accountIQExchangeRate)
 //    ((grossCreditWithProviderForex - grossCreditWithAccountIQForex) * 100)/(grossCreditWithProviderForex) < 5
+  }
+
+  def findBatchSettlementMerchant(reconcileCmd: ReconcileCmd) = {
+    for {
+      dao <- ZIO.service[ElasticSearchDAO[BatchSalesToPayoutReportRow]]
+      reports <- dao.find_batch_settlement_merchant(reconcileCmd.timeFrame.start, reconcileCmd.timeFrame.end, reconcileCmd.merchant, reconcileCmd.provider)
+      _ <- ZIO.logDebug(reports.toString)
+    } yield reports
   }
 
 }

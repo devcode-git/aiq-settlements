@@ -70,25 +70,25 @@ object Main extends ZIOAppDefault {
   def app =
     ZIO.scoped(for {
       _          <- ZIO.logInfo("Starting Application")
-//      routes     <- ZIO.service[Routes]
-//      _          <- ZIO.logInfo("Starting HTTP server")
-//      _          <- Server.serve(routes.serverEndpoints)
+      routes     <- ZIO.service[Routes]
+      _          <- ZIO.logInfo("Starting HTTP server")
+      _          <- Server.serve(routes.serverEndpoints)
 
 //      _ <- SftpDownloader.downloadAccount().provideLayer(sftpAccount)
 //      _ <- createIndex().provide(elasticDAO)
 
 
-      batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
-      batchReports <- TransformService.saveBatchSalesToPayoutReport(batchPath).provide(batchReportsElasticDAO)
-      _ <- ZIO.logInfo(batchReports.mkString(","))
+//      batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
+//      batchReports <- TransformService.saveBatchSalesToPayoutReport(batchPath, "adyen", "kindred").provide(batchReportsElasticDAO)
+//      _ <- ZIO.logInfo(batchReports.mkString(","))
 
-      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
-      batchReports <- TransformService.saveSettlementDetailReport(settlementPath).provide(settlementReportsElasticDAO)
-      _ <- ZIO.logInfo(batchReports.mkString(","))
-
-      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
-      reports <- TransformService.saveMerchantPaymentTransactionsReport(merchantPaymentTransactions).provide(merchantPaymentTransactionsReportsElasticDAO)
-      _ <- ZIO.logInfo(reports.mkString(","))
+//      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
+//      batchReports <- TransformService.saveSettlementDetailReport(settlementPath).provide(settlementReportsElasticDAO)
+//      _ <- ZIO.logInfo(batchReports.mkString(","))
+//
+//      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
+//      reports <- TransformService.saveMerchantPaymentTransactionsReport(merchantPaymentTransactions).provide(merchantPaymentTransactionsReportsElasticDAO)
+//      _ <- ZIO.logInfo(reports.mkString(","))
 
     } yield ())
 
@@ -98,7 +98,10 @@ object Main extends ZIOAppDefault {
     app.provide(
       AppConfig.live,
       ServerDependencies.live,
-      Routes.live
+      Routes.live,
+      batchReportsElasticDAO,
+      settlementReportsElasticDAO,
+      merchantPaymentTransactionsReportsElasticDAO
     )
   }
 

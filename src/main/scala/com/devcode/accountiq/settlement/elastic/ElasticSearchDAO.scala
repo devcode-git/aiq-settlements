@@ -1,9 +1,11 @@
 package com.devcode.accountiq.settlement.elastic
 
+import com.devcode.accountiq.settlement.elastic.reports.AIQField
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
-import com.sksamuel.elastic4s.{ElasticClient, Indexable}
+import com.devcode.accountiq.settlement.util.DateUtil.LocalDateTimeConverter
+import com.sksamuel.elastic4s.{ElasticClient, ElasticDate, Indexable}
 import com.sksamuel.elastic4s.ElasticDsl._
 import com.sksamuel.elastic4s.zio.instances._
 import zio._
@@ -12,6 +14,9 @@ import zio.json._
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import com.sksamuel.elastic4s.ElasticDsl._
+
+import java.sql.Timestamp
+import java.time.LocalDateTime
 
 
 class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String) {
@@ -26,6 +31,26 @@ class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String) {
       search(indexName)
         .query(matchAllQuery())
         .limit(limit)
+        .seqNoPrimaryTerm(true)
+    )
+  }
+
+
+  def find_batch_settlement_merchant(from: LocalDateTime,
+           to: LocalDateTime,
+           merchant: String,
+           provider: String) = {
+    client.execute(
+      search(indexName)
+        .query(
+          boolQuery()
+            .must(
+              rangeQuery("payoutDate").gte(from.toElasticDate).lt(to.toElasticDate),
+              termQuery(AIQField.merchant.toString, merchant),
+              termQuery(AIQField.provider.toString, provider)
+            )
+        )
+        .limit(1000)
         .seqNoPrimaryTerm(true)
     )
   }
@@ -54,13 +79,16 @@ case class ESDoc(doc: Map[String, String])
 
 object ESDoc {
   implicit val formatter: Indexable[ESDoc] = (t: ESDoc) => t.doc.toJson
-  val fileIdField = "AIQ_Filename"
 
-  def parseESDocs(rows: List[List[String]], fileId: String): List[ESDoc] = {
+  def parseESDocs(rows: List[List[String]], fileId: String, provider: String, merchant: String): List[ESDoc] = {
     rows match {
       case _ :: Nil => List()
       case Nil => List()
-      case headerRow :: dataRows => dataRows.map(row => headerRow.zip(row)).map(_.toMap).map(_ + (fileIdField -> fileId)).map(ESDoc(_))
+      case headerRow :: dataRows => dataRows.map(row => headerRow.zip(row)).map(_.toMap)
+        .map(_ + (AIQField.filename.toString -> fileId))
+        .map(_ + (AIQField.provider.toString -> provider))
+        .map(_ + (AIQField.merchant.toString -> merchant))
+        .map(ESDoc(_))
     }
   }
 }

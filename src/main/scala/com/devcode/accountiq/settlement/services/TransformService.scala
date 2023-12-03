@@ -12,14 +12,14 @@ import java.io.File
 
 object TransformService {
 
-  private def parseESDocs(file: File): ZIO[Any, Throwable, List[ESDoc]] = for {
+  private def parseESDocs(file: File, provider: String, merchant: String): ZIO[Any, Throwable, List[ESDoc]] = for {
     fileId <- FileUtil.getFileNamePart(file.getPath)
     rows <- CSVParser.parse(file.toPath)
-  } yield ESDoc.parseESDocs(rows, fileId)
+  } yield ESDoc.parseESDocs(rows, fileId, provider, merchant)
 
-  def saveBatchSalesToPayoutReport(file: File): ZIO[ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, List[BatchSalesToPayoutReportRow]] = {
+  def saveBatchSalesToPayoutReport(file: File, provider: String, merchant: String): ZIO[ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, List[BatchSalesToPayoutReportRow]] = {
     for {
-      esDocs <- parseESDocs(file)
+      esDocs <- parseESDocs(file, provider, merchant)
       batchReports = esDocs.map(BatchSalesToPayoutReportRow.fromESDocRaw)
       dao <- ZIO.service[ElasticSearchDAO[BatchSalesToPayoutReportRow]]
       response <- dao.addBulk(batchReports)
@@ -27,9 +27,9 @@ object TransformService {
     } yield batchReports
   }
 
-  def saveSettlementDetailReport(file: File): ZIO[ElasticSearchDAO[SettlementDetailReportRow], Throwable, List[SettlementDetailReportRow]] = {
+  def saveSettlementDetailReport(file: File, provider: String, merchant: String): ZIO[ElasticSearchDAO[SettlementDetailReportRow], Throwable, List[SettlementDetailReportRow]] = {
     for {
-      esDocs <- parseESDocs(file)
+      esDocs <- parseESDocs(file, provider, merchant)
       settlementReports = esDocs.map(SettlementDetailReportRow.fromESDocRaw)
       dao <- ZIO.service[ElasticSearchDAO[SettlementDetailReportRow]]
       response <- dao.addBulk(settlementReports)
@@ -37,9 +37,9 @@ object TransformService {
     } yield settlementReports
   }
 
-  def saveMerchantPaymentTransactionsReport(file: File): ZIO[ElasticSearchDAO[MerchantPaymentTransactionsReportRow], Throwable, List[MerchantPaymentTransactionsReportRow]] = {
+  def saveMerchantPaymentTransactionsReport(file: File, provider: String, merchant: String): ZIO[ElasticSearchDAO[MerchantPaymentTransactionsReportRow], Throwable, List[MerchantPaymentTransactionsReportRow]] = {
     for {
-      esDocs <- parseESDocs(file)
+      esDocs <- parseESDocs(file, provider, merchant)
       settlementReports = esDocs.map(MerchantPaymentTransactionsReportRow.fromESDocRaw)
       dao <- ZIO.service[ElasticSearchDAO[MerchantPaymentTransactionsReportRow]]
       response <- dao.addBulk(settlementReports)

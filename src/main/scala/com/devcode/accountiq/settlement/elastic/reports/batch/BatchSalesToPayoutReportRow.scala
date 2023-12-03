@@ -1,6 +1,7 @@
 package com.devcode.accountiq.settlement.elastic.reports.batch
 
 import com.devcode.accountiq.settlement.elastic.ESDoc
+import com.devcode.accountiq.settlement.elastic.reports.AIQField
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
 import com.sksamuel.elastic4s.ElasticDsl.keywordField
@@ -23,7 +24,11 @@ case class BatchSalesToPayoutReportSummaryRow(status: String,
                                               paymentMethod: Option[String],
                                               paymentMethodDescription: Option[String],
                                               salesCount: Long,
-                                              refundCount: Long) extends BatchSalesToPayoutReportRow
+                                              refundCount: Long,
+                                              aiqFilename: String,
+                                              aiqProvider: String,
+                                              aiqMerchant: String
+                                             ) extends BatchSalesToPayoutReportRow
 
 object BatchSalesToPayoutReportSummaryRow {
   implicit val decoder: JsonDecoder[BatchSalesToPayoutReportSummaryRow] =
@@ -42,7 +47,11 @@ case class BatchSalesToPayoutPaidOutReportRow(status: String,
                                               paymentMethod: String,
                                               paymentMethodDescription: String,
                                               salesCount: Long,
-                                              refundCount: Long) extends BatchSalesToPayoutReportRow
+                                              refundCount: Long,
+                                              aiqFilename: String,
+                                              aiqProvider: String,
+                                              aiqMerchant: String,
+                                             ) extends BatchSalesToPayoutReportRow
 
 object BatchSalesToPayoutPaidOutReportRow {
   implicit val decoder: JsonDecoder[BatchSalesToPayoutPaidOutReportRow] =
@@ -88,7 +97,10 @@ object BatchSalesToPayoutReportRow {
           Option(doc(BatchSalesToPayoutReportField.paymentMethod)).filter(_.nonEmpty),
           Option(doc(BatchSalesToPayoutReportField.paymentMethodDescription)).filter(_.nonEmpty),
           doc(BatchSalesToPayoutReportField.salesCount).toLong,
-          doc(BatchSalesToPayoutReportField.refundCount).toLong
+          doc(BatchSalesToPayoutReportField.refundCount).toLong,
+          doc(AIQField.filename),
+          doc(AIQField.provider),
+          doc(AIQField.merchant)
         )
       case status if status == "paidOut" =>
         BatchSalesToPayoutPaidOutReportRow(
@@ -101,7 +113,10 @@ object BatchSalesToPayoutReportRow {
           doc(BatchSalesToPayoutReportField.paymentMethod),
           doc(BatchSalesToPayoutReportField.paymentMethodDescription),
           doc(BatchSalesToPayoutReportField.salesCount).toLong,
-          doc(BatchSalesToPayoutReportField.refundCount).toLong
+          doc(BatchSalesToPayoutReportField.refundCount).toLong,
+          doc(AIQField.filename),
+          doc(AIQField.provider),
+          doc(AIQField.merchant)
         )
     }
   }

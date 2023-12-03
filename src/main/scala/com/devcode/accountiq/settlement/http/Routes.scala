@@ -1,12 +1,14 @@
 package com.devcode.accountiq.settlement.http
 
+import com.devcode.accountiq.settlement.elastic.ElasticSearchDAO
+import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.devcode.accountiq.settlement.recoonciliation.{ReconTimeFrame, ReconcileCmd}
 import com.devcode.accountiq.settlement.services.ReconciliationService
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
 import zio._
 
-class Routes() {
+class Routes(elasticSearchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow]) {
 
   private val healthCheckEndpoint =
     endpoint.get
@@ -25,9 +27,9 @@ class Routes() {
     reconcileEndpoint.zServerLogic { case (merchant, provider, days, timeFrame) =>
       for {
         dateRange <- getTimeFrame(days, timeFrame)
-        cmd = ReconcileCmd(dateRange, Some(merchant), Some(provider))
-        res <- ReconciliationService.reconcile(cmd)
-      } yield (res)
+        cmd = ReconcileCmd(dateRange, merchant, provider)
+        res <- ReconciliationService.findBatchSettlementMerchant(cmd).provide(ZLayer.succeed(elasticSearchDAO)).orDie
+      } yield (res.toString)
     }
 
   private def getTimeFrame(days: Option[RuntimeFlags], timeFrame: String) = {
@@ -47,8 +49,8 @@ class Routes() {
 
 object Routes {
 
-  def create(): Routes = new Routes()
+  def create(elasticSearchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow]): Routes = new Routes(elasticSearchDAO)
 
-  val live: ZLayer[Any, Throwable, Routes] = ZLayer.fromFunction(create _)
+  val live: ZLayer[ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, Routes] = ZLayer.fromFunction(create _)
 
 }
