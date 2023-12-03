@@ -1,5 +1,6 @@
 package com.devcode.accountiq.settlement
 
+import com.devcode.accountiq.settlement.config.AppConfig
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
@@ -66,7 +67,7 @@ object Main extends ZIOAppDefault {
     _ <- ZIO.logInfo(response.toString)
   } yield ()
 
-  def app: ZIO[Any, Throwable, Unit] =
+  def app =
     ZIO.scoped(for {
       _          <- ZIO.logInfo("Starting Application")
       routes     <- ZIO.service[Routes]
@@ -96,7 +97,11 @@ object Main extends ZIOAppDefault {
 
 
   override def run: ZIO[Any, Throwable, Unit] = {
-    app
+    app.provide(
+      AppConfig.live,
+      ServerDependencies.live,
+      Routes.live
+    )
   }
 
 }

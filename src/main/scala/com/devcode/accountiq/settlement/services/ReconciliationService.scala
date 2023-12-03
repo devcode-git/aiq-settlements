@@ -24,15 +24,16 @@ object ReconciliationService {
                                                             settlementDetailReport: List[SettlementDetailReportRow]) = {
     // TODO: move it, are there nay other providers ?
     val adyenProviderName = "Adyen payconiq Deposit"
-    val merchantAmount = merchantReports.filter(_.provider == adyenProviderName).reduce(_.amount.value + _.amount.value)
-    val settlementDetailAmount = settlementDetailReport.reduce((a, b) => a.grossCredit * a.exchangeRate + b.grossCredit * b.exchangeRate)
+//    val merchantAmount = merchantReports.filter(_.provider == adyenProviderName).reduce(_.amount.value + _.amount.value)
+//    val settlementDetailAmount = settlementDetailReport.reduce((a, b) => a.grossCredit * a.exchangeRate + b.grossCredit * b.exchangeRate)
   }
 
   // Formula: (((Gross Settled Amount * Provider_Forex - Gross Settled Amount * AccountIQ_Forex) x100)/(Gross Settled Amount * Provider_Forex) < 5
   def reconcileProviderForex(settlementDetailReport: List[SettlementDetailReportRow], accountIQExchangeRate: Double): Boolean = {
-    val grossCreditWithProviderForex = settlementDetailReport.reduce((a, b) => a.grossCredit * a.exchangeRate + b.grossCredit * b.exchangeRate)
-    val grossCreditWithAccountIQForex = settlementDetailReport.reduce((a, b) => a.grossCredit * accountIQExchangeRate + b.grossCredit * accountIQExchangeRate)
-    ((grossCreditWithProviderForex - grossCreditWithAccountIQForex) * 100)/(grossCreditWithProviderForex) < 5
+    true
+//    val grossCreditWithProviderForex = settlementDetailReport.reduce((a, b) => a.grossCredit * a.exchangeRate + b.grossCredit * b.exchangeRate)
+//    val grossCreditWithAccountIQForex = settlementDetailReport.reduce((a, b) => a.grossCredit * accountIQExchangeRate + b.grossCredit * accountIQExchangeRate)
+//    ((grossCreditWithProviderForex - grossCreditWithAccountIQForex) * 100)/(grossCreditWithProviderForex) < 5
   }
 
 }

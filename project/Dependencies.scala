@@ -35,7 +35,8 @@ object Dependencies {
 
   val tapir = Seq(
     "com.softwaremill.sttp.tapir" %% "tapir-zio" % Version.tapir,
-    "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % Version.tapir
+    "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % Version.tapir,
+    "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % Version.tapir
   )
 
   val csvParser = Seq("com.github.tototoshi" %% "scala-csv" % "1.3.10")
