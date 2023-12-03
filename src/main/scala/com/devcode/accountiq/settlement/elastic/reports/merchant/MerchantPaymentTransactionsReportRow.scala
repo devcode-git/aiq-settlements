@@ -8,7 +8,7 @@ import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
 import com.sksamuel.elastic4s.ElasticDsl.keywordField
 
 import java.text.SimpleDateFormat
-import java.time.LocalDate
+import java.time.LocalDateTime
 
 case class MerchantPaymentTransactionsReportRow(
                                     operator: String,
@@ -16,8 +16,8 @@ case class MerchantPaymentTransactionsReportRow(
                                     txRef: Long,
                                     txId: Option[Long],
                                     providerRef: Option[Long],
-                                    created: LocalDate,
-                                    booked: LocalDate,
+                                    created: LocalDateTime,
+                                    booked: LocalDateTime,
                                     amount: Money,
                                     amountBase: Money,
                                     txAmount: Option[String],
@@ -77,8 +77,8 @@ object MerchantPaymentTransactionsReportRow {
         doc(MerchantPaymentTransactionsReportField.txRef).toLong,
         Option(doc(MerchantPaymentTransactionsReportField.txId)).filter(_.nonEmpty).map(_.toLong),
         Option(doc(MerchantPaymentTransactionsReportField.providerRef)).filter(_.nonEmpty).map(_.toLong),
-        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.created)).toLocalDate,
-        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.booked)).toLocalDate,
+        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.created)).toLocalDateTime,
+        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.booked)).toLocalDateTime,
         Money.parse(doc(MerchantPaymentTransactionsReportField.amount)),
         Money.parse(doc(MerchantPaymentTransactionsReportField.amountBase)),
         Option(doc(MerchantPaymentTransactionsReportField.txAmount)).filter(_.nonEmpty),

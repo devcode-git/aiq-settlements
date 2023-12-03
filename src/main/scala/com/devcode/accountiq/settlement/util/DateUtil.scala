@@ -1,10 +1,10 @@
 package com.devcode.accountiq.settlement.util
 
-import java.time.LocalDate
+import java.time.{LocalDateTime, ZoneId}
 import java.util.Date
 
 object DateUtil {
   implicit class LocalDateConverter(dateToConvert: Date) {
-    def toLocalDate: LocalDate = new java.sql.Date(dateToConvert.getTime).toLocalDate
+    def toLocalDateTime: LocalDateTime = LocalDateTime.ofInstant(dateToConvert.toInstant, ZoneId.systemDefault())
   }
 }

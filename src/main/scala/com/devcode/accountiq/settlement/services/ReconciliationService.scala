@@ -2,8 +2,15 @@ package com.devcode.accountiq.settlement.services
 
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
+import com.devcode.accountiq.settlement.recoonciliation.ReconcileCmd
+import zio._
 
 object ReconciliationService {
+
+  def reconcile(reconcileCmd: ReconcileCmd) = {
+
+    ZIO.succeed(s"merchant is ${reconcileCmd.merchantId}, provider is ${reconcileCmd.providerId}, tf is ${reconcileCmd.timeFrame.toString}}")
+  }
 
   def reconcileMerchantReports(merchantReports: List[MerchantPaymentTransactionsReportRow],
                                settlementDetailReport: List[SettlementDetailReportRow]) = {

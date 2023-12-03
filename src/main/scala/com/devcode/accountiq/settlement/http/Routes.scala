@@ -1,6 +1,7 @@
 package com.devcode.accountiq.settlement.http
 
-import com.devcode.accountiq.settlement.recoonciliation.ReconTimeFrame
+import com.devcode.accountiq.settlement.recoonciliation.{ReconTimeFrame, ReconcileCmd}
+import com.devcode.accountiq.settlement.services.ReconciliationService
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
 import zio._
@@ -21,11 +22,12 @@ class Routes() {
       .out(plainBody[String])
 
   private val reconcileServerEndpoint =
-    reconcileEndpoint.zServerLogic{case (merchant, provider, days, timeFrame) =>
-      val dateRange = getTimeFrame(days, timeFrame)
-      dateRange.flatMap { tf =>
-        ZIO.succeed(s"merchant is ${merchant}, provider is ${provider}, tf is ${tf.toString}}")
-      }
+    reconcileEndpoint.zServerLogic { case (merchant, provider, days, timeFrame) =>
+      for {
+        dateRange <- getTimeFrame(days, timeFrame)
+        cmd = ReconcileCmd(dateRange, Some(merchant), Some(provider))
+        res <- ReconciliationService.reconcile(cmd)
+      } yield (res)
     }
 
   private def getTimeFrame(days: Option[RuntimeFlags], timeFrame: String) = {

@@ -8,14 +8,14 @@ import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
 import com.sksamuel.elastic4s.ElasticDsl.keywordField
 
 import java.text.SimpleDateFormat
-import java.time.LocalDate
+import java.time.LocalDateTime
 
 case class SettlementDetailReportRow(companyAccount: String,
                                      merchantAccount: String,
                                      pspReference: String,
                                      merchantReference: Long,
                                      paymentMethod: String,
-                                     creationDate: LocalDate,
+                                     creationDate: LocalDateTime,
                                      timeZone: String,
                                      `type`: String,
                                      modificationReference: String,
@@ -84,7 +84,7 @@ object SettlementDetailReportRow {
       doc(SettlementDetailReportField.pspReference),
       doc(SettlementDetailReportField.merchantReference).toLong,
       doc(SettlementDetailReportField.paymentMethod),
-      dateFormat.parse(doc(SettlementDetailReportField.creationDate)).toLocalDate,
+      dateFormat.parse(doc(SettlementDetailReportField.creationDate)).toLocalDateTime,
       doc(SettlementDetailReportField.timeZone),
       doc(SettlementDetailReportField.`type`),
       doc(SettlementDetailReportField.modificationReference),
