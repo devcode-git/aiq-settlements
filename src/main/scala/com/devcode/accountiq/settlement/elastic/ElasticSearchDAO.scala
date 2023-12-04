@@ -21,7 +21,7 @@ import java.time.LocalDateTime
 
 
 class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, reader: HitReader[T]) {
-  
+
   implicit object IndexableHitreader extends HitReader[Json] {
     override def read(hit: Hit): Try[Json] =
       if (hit.isSourceEmpty) {
@@ -41,9 +41,9 @@ class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, r
       }
   }
 
-  implicit lazy val global = ExecutionContext.fromExecutorService(
-    Executors.newWorkStealingPool(10)
-  )
+//  implicit lazy val global = ExecutionContext.fromExecutorService(
+//    Executors.newWorkStealingPool(10)
+//  )
 
   def findAll() = {
     val limit = 100
@@ -57,9 +57,9 @@ class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, r
 
 
   def find_batch_settlement_merchant(from: LocalDateTime,
-           to: LocalDateTime,
-           merchant: String,
-           provider: String): ZIO[Any, Throwable, Response[IndexedSeq[Try[T]]]] = {
+                                     to: LocalDateTime,
+                                     merchant: String,
+                                     provider: String): ZIO[Any, Throwable, Response[IndexedSeq[Try[T]]]] = {
     client.execute(
       search(indexName)
         .query(
@@ -72,7 +72,7 @@ class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, r
         )
         .limit(1000)
         .seqNoPrimaryTerm(true)
-    ).map(r => r.map( v => v.safeTo[T](reader)))
+    ).map(r => r.map(v => v.safeTo[T](reader)))
   }
 
   def createIndices() = client.execute {
@@ -95,50 +95,25 @@ class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, r
 
 }
 
-case class ESDoc(doc: Map[String, String])
-
-object ESDoc {
-  implicit val formatter: Indexable[ESDoc] = (t: ESDoc) => t.doc.toJson
-
-  def parseESDocs(rows: List[List[String]], fileId: String, provider: String, merchant: String): List[ESDoc] = {
-    rows match {
-      case _ :: Nil => List()
-      case Nil => List()
-      case headerRow :: dataRows => dataRows.map(row => headerRow.zip(row)).map(_.toMap)
-        .map(_ + (AIQField.filename.toString -> fileId))
-        .map(_ + (AIQField.provider.toString -> provider))
-        .map(_ + (AIQField.merchant.toString -> merchant))
-        .map(ESDoc(_))
-    }
-  }
-}
-
 object ElasticSearchDAO {
-
-//  val liveESDoc: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[ESDoc]] = ZLayer.fromFunction(create _)
-//
-//  def create(client: ElasticClient): ElasticSearchDAO[ESDoc] = {
-//    val indexName = "raw_settlement_merchant_reports"
-//    new ElasticSearchDAO[ESDoc](client, indexName)
-//  }
 
   val liveBatchSalesToPayout: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[BatchSalesToPayoutReportRow]] = ZLayer.fromFunction(createBatchSalesToPayout _)
 
-  def createBatchSalesToPayout(client: ElasticClient): ElasticSearchDAO[BatchSalesToPayoutReportRow] = {
+  private def createBatchSalesToPayout(client: ElasticClient): ElasticSearchDAO[BatchSalesToPayoutReportRow] = {
     val indexName = "batch_settlement_merchant_reports"
     new ElasticSearchDAO[BatchSalesToPayoutReportRow](client, indexName, BatchSalesToPayoutReportRow.IndexableHitreader)
   }
 
   val liveSettlementDetail: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[SettlementDetailReportRow]] = ZLayer.fromFunction(createSettlementDetail _)
 
-  def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReportRow] = {
+  private def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReportRow] = {
     val indexName = "detail_settlement_merchant_reports"
     new ElasticSearchDAO[SettlementDetailReportRow](client, indexName, SettlementDetailReportRow.IndexableHitreader)
   }
 
   val liveMerchantPaymentTransactions: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[MerchantPaymentTransactionsReportRow]] = ZLayer.fromFunction(createMerchantPaymentTransactions _)
 
-  def createMerchantPaymentTransactions(client: ElasticClient): ElasticSearchDAO[MerchantPaymentTransactionsReportRow] = {
+  private def createMerchantPaymentTransactions(client: ElasticClient): ElasticSearchDAO[MerchantPaymentTransactionsReportRow] = {
     val indexName = "merchant_payment_transactions_reports"
     new ElasticSearchDAO[MerchantPaymentTransactionsReportRow](client, indexName, MerchantPaymentTransactionsReportRow.IndexableHitreader)
   }

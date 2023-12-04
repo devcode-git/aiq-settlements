@@ -1,6 +1,6 @@
 package com.devcode.accountiq.settlement.elastic.reports.batch
 
-import com.devcode.accountiq.settlement.elastic.ESDoc
+import com.devcode.accountiq.settlement.elastic.reports.ESDoc
 import com.devcode.accountiq.settlement.elastic.reports.{AIQField, Version}
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}

@@ -1,7 +1,8 @@
 package com.devcode.accountiq.settlement.elastic.reports.merchant
 
 import com.devcode.accountiq.settlement.elastic.reports.{AIQField, Version}
-import com.devcode.accountiq.settlement.elastic.{ESDoc, Money}
+import com.devcode.accountiq.settlement.elastic.Money
+import com.devcode.accountiq.settlement.elastic.reports.ESDoc
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.{Hit, HitReader, Indexable}
 import zio.json.{DecoderOps, DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
