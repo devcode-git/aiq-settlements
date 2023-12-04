@@ -5,13 +5,15 @@ import com.devcode.accountiq.settlement.elastic.reports.{AIQField, Version}
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
 import com.sksamuel.elastic4s.ElasticDsl.keywordField
-import com.sksamuel.elastic4s.Indexable
+import com.sksamuel.elastic4s.{Hit, HitReader, Indexable}
+import zio.json.ast.Json
 import zio.json.internal.{RetractReader, Write}
-import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder, JsonError}
+import zio.json.{DecoderOps, DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder, JsonError}
 
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.util.Date
+import scala.util.{Failure, Success, Try}
 
 trait BatchSalesToPayoutReportRow
 
@@ -40,7 +42,9 @@ object BatchSalesToPayoutReportSummaryRow {
     DeriveJsonEncoder.gen[BatchSalesToPayoutReportSummaryRow]
 }
 
-case class BatchSalesToPayoutPaidOutReportRow(status: String,
+case class BatchSalesToPayoutPaidOutReportRow(_id: Option[String] = None,
+                                              version: Option[Version] = None,
+                                              status: String,
                                               sales: Double,
                                               refunds: Double,
                                               salesRefund: Double,
@@ -64,6 +68,32 @@ object BatchSalesToPayoutPaidOutReportRow {
 
 
 object BatchSalesToPayoutReportRow {
+
+  implicit object IndexableHitreader extends HitReader[BatchSalesToPayoutReportRow] {
+    override def read(hit: Hit): Try[BatchSalesToPayoutReportRow] =
+      if (hit.isSourceEmpty) {
+        Failure(new IllegalArgumentException(s"doc (id:${hit.id}) src is empty"))
+      } else {
+        val jsonVal = for {
+          entityJson <- hit.sourceAsString.fromJson[Json]
+          infoJson <- s"""{"_id": "${Some(hit.id)}", "version": {"_seq_no": ${hit.seqNo}, "_primary_term": ${hit.primaryTerm} } }""".fromJson[Json]
+        } yield entityJson.merge(infoJson)
+
+        jsonVal.flatMap { j =>
+          j.asObject.flatMap(_.fields.find { case (k, _) => k == "status" }).flatMap(_._2.asString) match {
+            case Some("summary") => j.as[BatchSalesToPayoutReportSummaryRow]
+            case Some("paidOut") => j.as[BatchSalesToPayoutPaidOutReportRow]
+            case Some(v) =>  Left(s"Not expected value `${v}` for status")
+            case None =>  Left(s"Could not find status in json")
+          }
+        } match {
+          case Right(j) => Success(j)
+          case Left(e) => Failure(new IllegalArgumentException(
+            s"failed to parse src ${hit.sourceAsString} errors: " + e
+          ))
+        }
+      }
+  }
 
   val mapping = properties(
     keywordField("status"),
@@ -108,6 +138,8 @@ object BatchSalesToPayoutReportRow {
         )
       case status if status == "paidOut" =>
         BatchSalesToPayoutPaidOutReportRow(
+          None,
+          None,
           status,
           doc(BatchSalesToPayoutReportField.sales).toDouble,
           doc(BatchSalesToPayoutReportField.refunds).toDouble,

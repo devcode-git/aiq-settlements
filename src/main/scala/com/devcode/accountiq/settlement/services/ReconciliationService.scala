@@ -7,6 +7,8 @@ import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDet
 import com.devcode.accountiq.settlement.recoonciliation.{ReconTimeFrame, ReconcileCmd}
 import zio._
 
+import scala.util.{Success, Failure}
+
 object ReconciliationService {
 
   def reconcile(reconcileCmd: ReconcileCmd) = {
@@ -45,12 +47,15 @@ object ReconciliationService {
 //    ((grossCreditWithProviderForex - grossCreditWithAccountIQForex) * 100)/(grossCreditWithProviderForex) < 5
   }
 
-  def findBatchSettlementMerchant(reconcileCmd: ReconcileCmd) = {
+  def findBatchSettlementMerchant(reconcileCmd: ReconcileCmd): ZIO[ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, IndexedSeq[BatchSalesToPayoutReportRow]] = {
     for {
       dao <- ZIO.service[ElasticSearchDAO[BatchSalesToPayoutReportRow]]
       reports <- dao.find_batch_settlement_merchant(reconcileCmd.timeFrame.start, reconcileCmd.timeFrame.end, reconcileCmd.merchant, reconcileCmd.provider)
+      results <- ZIO.attempt(reports.result.map {
+        case Success(v) => v
+      })
       _ <- ZIO.logDebug(reports.toString)
-    } yield reports
+    } yield results
   }
 
 }

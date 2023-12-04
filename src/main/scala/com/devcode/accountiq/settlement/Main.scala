@@ -29,11 +29,11 @@ object Main extends ZIOAppDefault {
         .fromResourcePath()
     )
 
-  private val esDocsElasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[ESDoc]] = ZLayer.make[ElasticSearchDAO[ESDoc]](
-    ElasticSearchClient.live,
-    ElasticSearchDAO.liveESDoc,
-    ElasticConfig.live
-  )
+//  private val esDocsElasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[ESDoc]] = ZLayer.make[ElasticSearchDAO[ESDoc]](
+//    ElasticSearchClient.live,
+//    ElasticSearchDAO.liveESDoc,
+//    ElasticConfig.live
+//  )
 
   private val batchReportsElasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[BatchSalesToPayoutReportRow]] = ZLayer.make[ElasticSearchDAO[BatchSalesToPayoutReportRow]](
     ElasticSearchClient.live,
