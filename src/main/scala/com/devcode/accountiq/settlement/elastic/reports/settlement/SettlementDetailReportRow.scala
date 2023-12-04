@@ -1,16 +1,22 @@
 package com.devcode.accountiq.settlement.elastic.reports.settlement
 
 import com.devcode.accountiq.settlement.elastic.ESDoc
+import com.devcode.accountiq.settlement.elastic.reports.{AIQField, Version}
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
-import com.sksamuel.elastic4s.Indexable
-import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
+import com.sksamuel.elastic4s.{Hit, HitReader, Indexable}
+import zio.json.{DecoderOps, DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
 import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
 import com.sksamuel.elastic4s.ElasticDsl.keywordField
+import zio.json.ast.Json
 
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
+import scala.util.{Failure, Success, Try}
 
-case class SettlementDetailReportRow(companyAccount: String,
+case class SettlementDetailReportRow(
+                                    _id: Option[String] = None,
+                                    version: Option[Version] = None,
+                                    companyAccount: String,
                                      merchantAccount: String,
                                      pspReference: String,
                                      merchantReference: Long,
@@ -33,7 +39,10 @@ case class SettlementDetailReportRow(companyAccount: String,
                                      paymentMethodVariant: String,
                                      modificationMerchantReference: String,
                                      batchNumber: Long,
-                                     shopperReference: Long)
+                                     shopperReference: Long,
+                                     aiqFilename: String,
+                                     aiqProvider: String,
+                                     aiqMerchant: String)
 
 object SettlementDetailReportRow {
 
@@ -64,6 +73,27 @@ object SettlementDetailReportRow {
       keywordField("shopperReference")
   )
 
+  implicit object IndexableHitreader extends HitReader[SettlementDetailReportRow] {
+    override def read(hit: Hit): Try[SettlementDetailReportRow] =
+      if (hit.isSourceEmpty) {
+        Failure(new IllegalArgumentException(s"doc (id:${hit.id}) src is empty"))
+      } else {
+        val jsonVal = for {
+          entityJson <- hit.sourceAsString.fromJson[Json]
+          infoJson <- s"""{"_id": "${Some(hit.id)}", "version": {"_seq_no": ${hit.seqNo}, "_primary_term": ${hit.primaryTerm} } }""".fromJson[Json]
+        } yield entityJson.merge(infoJson)
+
+        jsonVal.flatMap { j =>
+          j.as[SettlementDetailReportRow]
+        } match {
+          case Right(j) => Success(j)
+          case Left(e) => Failure(new IllegalArgumentException(
+            s"failed to parse src ${hit.sourceAsString} errors: " + e
+          ))
+        }
+      }
+  }
+
   implicit val decoder: JsonDecoder[SettlementDetailReportRow] =
     DeriveJsonDecoder.gen[SettlementDetailReportRow]
 
@@ -79,6 +109,8 @@ object SettlementDetailReportRow {
   def fromESDocRaw(esDoc: ESDoc): SettlementDetailReportRow = {
     val doc = esDoc.doc
     SettlementDetailReportRow(
+      None,
+      None,
       doc(SettlementDetailReportField.companyAccount),
       doc(SettlementDetailReportField.merchantAccount),
       doc(SettlementDetailReportField.pspReference),
@@ -102,7 +134,10 @@ object SettlementDetailReportRow {
       doc(SettlementDetailReportField.paymentMethodVariant),
       doc(SettlementDetailReportField.modificationMerchantReference),
       doc(SettlementDetailReportField.batchNumber).toLong,
-      doc(SettlementDetailReportField.shopperReference).toLong
+      doc(SettlementDetailReportField.shopperReference).toLong,
+      doc(AIQField.filename),
+      doc(AIQField.provider),
+      doc(AIQField.merchant)
     )
   }
 }

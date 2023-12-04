@@ -133,14 +133,14 @@ object ElasticSearchDAO {
 
   def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReportRow] = {
     val indexName = "detail_settlement_merchant_reports"
-    new ElasticSearchDAO[SettlementDetailReportRow](client, indexName, ???)
+    new ElasticSearchDAO[SettlementDetailReportRow](client, indexName, SettlementDetailReportRow.IndexableHitreader)
   }
 
   val liveMerchantPaymentTransactions: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[MerchantPaymentTransactionsReportRow]] = ZLayer.fromFunction(createMerchantPaymentTransactions _)
 
   def createMerchantPaymentTransactions(client: ElasticClient): ElasticSearchDAO[MerchantPaymentTransactionsReportRow] = {
     val indexName = "merchant_payment_transactions_reports"
-    new ElasticSearchDAO[MerchantPaymentTransactionsReportRow](client, indexName, ???)
+    new ElasticSearchDAO[MerchantPaymentTransactionsReportRow](client, indexName, MerchantPaymentTransactionsReportRow.IndexableHitreader)
   }
 
 }

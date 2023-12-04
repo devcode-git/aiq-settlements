@@ -1,33 +1,41 @@
 package com.devcode.accountiq.settlement.elastic.reports.merchant
 
+import com.devcode.accountiq.settlement.elastic.reports.{AIQField, Version}
 import com.devcode.accountiq.settlement.elastic.{ESDoc, Money}
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
-import com.sksamuel.elastic4s.Indexable
-import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
+import com.sksamuel.elastic4s.{Hit, HitReader, Indexable}
+import zio.json.{DecoderOps, DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
 import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
 import com.sksamuel.elastic4s.ElasticDsl.keywordField
+import zio.json.ast.Json
 
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
+import scala.util.{Failure, Success, Try}
 
 case class MerchantPaymentTransactionsReportRow(
-                                    operator: String,
-                                    provider: String,
-                                    txRef: Long,
-                                    txId: Option[Long],
-                                    providerRef: Option[Long],
-                                    created: LocalDateTime,
-                                    booked: LocalDateTime,
-                                    amount: Money,
-                                    amountBase: Money,
-                                    txAmount: Option[String],
-                                    txAmountBase: Option[String],
-                                    fee: String,
-                                    feeBase: String,
-                                    method: Option[String],
-                                    txType: String,
-                                    userId: Long,
-                                    jurisdiction: String)
+                                                 _id: Option[String] = None,
+                                                 version: Option[Version] = None,
+                                                 operator: String,
+                                                 provider: String,
+                                                 txRef: Long,
+                                                 txId: Option[Long],
+                                                 providerRef: Option[Long],
+                                                 created: LocalDateTime,
+                                                 booked: LocalDateTime,
+                                                 amount: Money,
+                                                 amountBase: Money,
+                                                 txAmount: Option[String],
+                                                 txAmountBase: Option[String],
+                                                 fee: String,
+                                                 feeBase: String,
+                                                 method: Option[String],
+                                                 txType: String,
+                                                 userId: Long,
+                                                 jurisdiction: String,
+                                                 aiqFilename: String,
+                                                 aiqProvider: String,
+                                                 aiqMerchant: String)
 
 object MerchantPaymentTransactionsReportRow {
 
@@ -51,6 +59,27 @@ object MerchantPaymentTransactionsReportRow {
     keywordField("jurisdiction")
   )
 
+  implicit object IndexableHitreader extends HitReader[MerchantPaymentTransactionsReportRow] {
+    override def read(hit: Hit): Try[MerchantPaymentTransactionsReportRow] =
+      if (hit.isSourceEmpty) {
+        Failure(new IllegalArgumentException(s"doc (id:${hit.id}) src is empty"))
+      } else {
+        val jsonVal = for {
+          entityJson <- hit.sourceAsString.fromJson[Json]
+          infoJson <- s"""{"_id": "${Some(hit.id)}", "version": {"_seq_no": ${hit.seqNo}, "_primary_term": ${hit.primaryTerm} } }""".fromJson[Json]
+        } yield entityJson.merge(infoJson)
+
+        jsonVal.flatMap { j =>
+          j.as[MerchantPaymentTransactionsReportRow]
+        } match {
+          case Right(j) => Success(j)
+          case Left(e) => Failure(new IllegalArgumentException(
+            s"failed to parse src ${hit.sourceAsString} errors: " + e
+          ))
+        }
+      }
+  }
+
   implicit val decoderMoney: JsonDecoder[Money] =
     DeriveJsonDecoder.gen[Money]
 
@@ -72,6 +101,8 @@ object MerchantPaymentTransactionsReportRow {
   def fromESDocRaw(esDoc: ESDoc): MerchantPaymentTransactionsReportRow = {
     val doc = esDoc.doc
     MerchantPaymentTransactionsReportRow(
+        None,
+        None,
         doc(MerchantPaymentTransactionsReportField.operator),
         doc(MerchantPaymentTransactionsReportField.provider),
         doc(MerchantPaymentTransactionsReportField.txRef).toLong,
@@ -88,7 +119,10 @@ object MerchantPaymentTransactionsReportRow {
         Option(doc(MerchantPaymentTransactionsReportField.method)).filter(_.nonEmpty),
         doc(MerchantPaymentTransactionsReportField.txType),
         doc(MerchantPaymentTransactionsReportField.userId).toLong,
-        doc(MerchantPaymentTransactionsReportField.jurisdiction)
+        doc(MerchantPaymentTransactionsReportField.jurisdiction),
+        doc(AIQField.filename),
+        doc(AIQField.provider),
+        doc(AIQField.merchant)
     )
   }
 }
