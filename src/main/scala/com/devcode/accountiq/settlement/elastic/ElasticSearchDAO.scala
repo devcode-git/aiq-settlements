@@ -22,7 +22,7 @@ import scala.util.{Failure, Success, Try}
 import java.time.LocalDateTime
 
 
-class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, reader: HitReader[T], mapping: MappingDefinition) {
+class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, reader: HitReader[T], mapping: MappingDefinition, dateField: String) {
 
   implicit object IndexableHitreader extends HitReader[Json] {
     override def read(hit: Hit): Try[Json] =
@@ -58,7 +58,7 @@ class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, r
   }
 
 
-  def find_batch_settlement_merchant(from: LocalDateTime,
+  def find(from: LocalDateTime,
                                      to: LocalDateTime,
                                      merchant: String,
                                      provider: String): ZIO[Any, Throwable, Response[IndexedSeq[Try[T]]]] = {
@@ -67,7 +67,7 @@ class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, r
         .query(
           boolQuery()
             .must(
-              rangeQuery("payoutDate").gte(from.toElasticDate).lt(to.toElasticDate),
+              rangeQuery(dateField).gte(from.toElasticDate).lt(to.toElasticDate),
               termQuery(AIQField.merchant.toString, merchant),
               termQuery(AIQField.provider.toString, provider)
             )
@@ -99,21 +99,21 @@ object ElasticSearchDAO {
 
   private def createBatchSalesToPayout(client: ElasticClient): ElasticSearchDAO[BatchSalesToPayoutReportRow] = {
     val indexName = "batch_settlement_merchant_reports"
-    new ElasticSearchDAO[BatchSalesToPayoutReportRow](client, indexName, BatchSalesToPayoutReportRow.IndexableHitreader, BatchSalesToPayoutReportRow.mapping)
+    new ElasticSearchDAO[BatchSalesToPayoutReportRow](client, indexName, BatchSalesToPayoutReportRow.IndexableHitreader, BatchSalesToPayoutReportRow.mapping, "payoutDate")
   }
 
   val liveSettlementDetail: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[SettlementDetailReportRow]] = ZLayer.fromFunction(createSettlementDetail _)
 
   private def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReportRow] = {
     val indexName = "detail_settlement_merchant_reports"
-    new ElasticSearchDAO[SettlementDetailReportRow](client, indexName, SettlementDetailReportRow.IndexableHitreader, SettlementDetailReportRow.mapping)
+    new ElasticSearchDAO[SettlementDetailReportRow](client, indexName, SettlementDetailReportRow.IndexableHitreader, SettlementDetailReportRow.mapping, "creationDate")
   }
 
   val liveMerchantPaymentTransactions: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[MerchantPaymentTransactionsReportRow]] = ZLayer.fromFunction(createMerchantPaymentTransactions _)
 
   private def createMerchantPaymentTransactions(client: ElasticClient): ElasticSearchDAO[MerchantPaymentTransactionsReportRow] = {
     val indexName = "merchant_payment_transactions_reports"
-    new ElasticSearchDAO[MerchantPaymentTransactionsReportRow](client, indexName, MerchantPaymentTransactionsReportRow.IndexableHitreader, MerchantPaymentTransactionsReportRow.mapping)
+    new ElasticSearchDAO[MerchantPaymentTransactionsReportRow](client, indexName, MerchantPaymentTransactionsReportRow.IndexableHitreader, MerchantPaymentTransactionsReportRow.mapping, "booked")
   }
 
 }

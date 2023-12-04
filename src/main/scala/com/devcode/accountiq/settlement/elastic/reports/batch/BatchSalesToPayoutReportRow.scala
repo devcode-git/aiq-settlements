@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 import java.util.Date
 import scala.util.{Failure, Success, Try}
 
-trait BatchSalesToPayoutReportRow
+sealed trait BatchSalesToPayoutReportRow
 
 case class BatchSalesToPayoutReportSummaryRow(_id: Option[String] = None,
                                               version: Option[Version] = None,
@@ -69,6 +69,12 @@ object BatchSalesToPayoutPaidOutReportRow {
 
 
 object BatchSalesToPayoutReportRow {
+
+  implicit val decoder: JsonDecoder[BatchSalesToPayoutReportRow] =
+    DeriveJsonDecoder.gen[BatchSalesToPayoutReportRow]
+
+  implicit val encoder: JsonEncoder[BatchSalesToPayoutReportRow] =
+    DeriveJsonEncoder.gen[BatchSalesToPayoutReportRow]
 
   implicit object IndexableHitreader extends HitReader[BatchSalesToPayoutReportRow] {
     override def read(hit: Hit): Try[BatchSalesToPayoutReportRow] =

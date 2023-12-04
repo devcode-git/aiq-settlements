@@ -2,13 +2,18 @@ package com.devcode.accountiq.settlement.http
 
 import com.devcode.accountiq.settlement.elastic.ElasticSearchDAO
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
+import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
+import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
 import com.devcode.accountiq.settlement.recoonciliation.{ReconTimeFrame, ReconcileCmd}
 import com.devcode.accountiq.settlement.services.ReconciliationService
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
 import zio._
+import zio.json.EncoderOps
 
-class Routes(elasticSearchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow]) {
+class Routes(batchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow],
+             merchantDAO: ElasticSearchDAO[MerchantPaymentTransactionsReportRow],
+             settlementDAO: ElasticSearchDAO[SettlementDetailReportRow]) {
 
   private val healthCheckEndpoint =
     endpoint.get
@@ -18,18 +23,40 @@ class Routes(elasticSearchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow]) {
   private val healthCheckServerEndpoint =
     healthCheckEndpoint.zServerLogic(_ => ZIO.succeed("hello world!"))
 
-  private val reconcileEndpoint =
+  private val batchReports =
     endpoint.post
-      .in("reconcile" / path[String] / path[String] / query[Option[Int]]("days") / stringJsonBody)
+      .in("batchReports" / path[String] / path[String] / query[Option[Int]]("days") / stringJsonBody)
       .out(plainBody[String])
-
-  private val reconcileServerEndpoint =
-    reconcileEndpoint.zServerLogic { case (merchant, provider, days, timeFrame) =>
+      .zServerLogic { case (merchant, provider, days, timeFrame) =>
       for {
         dateRange <- getTimeFrame(days, timeFrame)
         cmd = ReconcileCmd(dateRange, merchant, provider)
-        res <- ReconciliationService.findBatchSettlementMerchant(cmd).provide(ZLayer.succeed(elasticSearchDAO)).orDie
-      } yield (res.toString)
+        res <- ReconciliationService.findBatchSalesToPayoutReports(cmd).provide(ZLayer.succeed(batchDAO)).orDie
+      } yield (res.toJson)
+    }
+
+  private val merchantReports =
+    endpoint.post
+      .in("merchantReports" / path[String] / path[String] / query[Option[Int]]("days") / stringJsonBody)
+      .out(plainBody[String])
+      .zServerLogic { case (merchant, provider, days, timeFrame) =>
+      for {
+        dateRange <- getTimeFrame(days, timeFrame)
+        cmd = ReconcileCmd(dateRange, merchant, provider)
+        res <- ReconciliationService.findMerchantPaymentTransactionsReports(cmd).provide(ZLayer.succeed(merchantDAO)).orDie
+      } yield (res.toJson)
+    }
+
+  private val settlementReports =
+    endpoint.post
+      .in("settlementReports" / path[String] / path[String] / query[Option[Int]]("days") / stringJsonBody)
+      .out(plainBody[String])
+      .zServerLogic { case (merchant, provider, days, timeFrame) =>
+      for {
+        dateRange <- getTimeFrame(days, timeFrame)
+        cmd = ReconcileCmd(dateRange, merchant, provider)
+        res <- ReconciliationService.findSettlementDetailReportRow(cmd).provide(ZLayer.succeed(settlementDAO)).orDie
+      } yield (res.toJson)
     }
 
   private def getTimeFrame(days: Option[RuntimeFlags], timeFrame: String) = {
@@ -39,7 +66,7 @@ class Routes(elasticSearchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow]) {
     }
   }
 
-  private val endpoints = List(healthCheckServerEndpoint, reconcileServerEndpoint)
+  private val endpoints = List(healthCheckServerEndpoint, batchReports, merchantReports, settlementReports)
 
   val serverEndpoints = ZioHttpInterpreter()
     .toHttp(endpoints)
@@ -49,8 +76,10 @@ class Routes(elasticSearchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow]) {
 
 object Routes {
 
-  def create(elasticSearchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow]): Routes = new Routes(elasticSearchDAO)
+  def create(batchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow],
+             merchantDAO: ElasticSearchDAO[MerchantPaymentTransactionsReportRow],
+             settlementDAO: ElasticSearchDAO[SettlementDetailReportRow]): Routes = new Routes(batchDAO, merchantDAO, settlementDAO)
 
-  val live: ZLayer[ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, Routes] = ZLayer.fromFunction(create _)
+  val live: ZLayer[ElasticSearchDAO[BatchSalesToPayoutReportRow] with ElasticSearchDAO[MerchantPaymentTransactionsReportRow] with ElasticSearchDAO[SettlementDetailReportRow], Nothing, Routes] = ZLayer.fromFunction(create _)
 
 }

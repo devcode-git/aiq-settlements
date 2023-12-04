@@ -47,10 +47,32 @@ object ReconciliationService {
 //    ((grossCreditWithProviderForex - grossCreditWithAccountIQForex) * 100)/(grossCreditWithProviderForex) < 5
   }
 
-  def findBatchSettlementMerchant(reconcileCmd: ReconcileCmd): ZIO[ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, IndexedSeq[BatchSalesToPayoutReportRow]] = {
+  def findBatchSalesToPayoutReports(reconcileCmd: ReconcileCmd): ZIO[ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, IndexedSeq[BatchSalesToPayoutReportRow]] = {
     for {
       dao <- ZIO.service[ElasticSearchDAO[BatchSalesToPayoutReportRow]]
-      reports <- dao.find_batch_settlement_merchant(reconcileCmd.timeFrame.start, reconcileCmd.timeFrame.end, reconcileCmd.merchant, reconcileCmd.provider)
+      reports <- dao.find(reconcileCmd.timeFrame.start, reconcileCmd.timeFrame.end, reconcileCmd.merchant, reconcileCmd.provider)
+      results <- ZIO.attempt(reports.result.map {
+        case Success(v) => v
+      })
+      _ <- ZIO.logDebug(reports.toString)
+    } yield results
+  }
+
+  def findMerchantPaymentTransactionsReports(reconcileCmd: ReconcileCmd): ZIO[ElasticSearchDAO[MerchantPaymentTransactionsReportRow], Throwable, IndexedSeq[MerchantPaymentTransactionsReportRow]] = {
+    for {
+      dao <- ZIO.service[ElasticSearchDAO[MerchantPaymentTransactionsReportRow]]
+      reports <- dao.find(reconcileCmd.timeFrame.start, reconcileCmd.timeFrame.end, reconcileCmd.merchant, reconcileCmd.provider)
+      results <- ZIO.attempt(reports.result.map {
+        case Success(v) => v
+      })
+      _ <- ZIO.logDebug(reports.toString)
+    } yield results
+  }
+
+  def findSettlementDetailReportRow(reconcileCmd: ReconcileCmd): ZIO[ElasticSearchDAO[SettlementDetailReportRow], Throwable, IndexedSeq[SettlementDetailReportRow]] = {
+    for {
+      dao <- ZIO.service[ElasticSearchDAO[SettlementDetailReportRow]]
+      reports <- dao.find(reconcileCmd.timeFrame.start, reconcileCmd.timeFrame.end, reconcileCmd.merchant, reconcileCmd.provider)
       results <- ZIO.attempt(reports.result.map {
         case Success(v) => v
       })
