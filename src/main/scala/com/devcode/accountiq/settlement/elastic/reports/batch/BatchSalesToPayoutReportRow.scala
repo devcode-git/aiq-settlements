@@ -5,6 +5,7 @@ import com.devcode.accountiq.settlement.elastic.reports.{AIQField, Version}
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
 import com.sksamuel.elastic4s.ElasticDsl.keywordField
+import com.sksamuel.elastic4s.requests.mappings.MappingDefinition
 import com.sksamuel.elastic4s.{Hit, HitReader, Indexable}
 import zio.json.ast.Json
 import zio.json.internal.{RetractReader, Write}
@@ -95,7 +96,7 @@ object BatchSalesToPayoutReportRow {
       }
   }
 
-  val mapping = properties(
+  val mapping: MappingDefinition = properties(
     keywordField("status"),
     keywordField("sales"),
     keywordField("refunds"),

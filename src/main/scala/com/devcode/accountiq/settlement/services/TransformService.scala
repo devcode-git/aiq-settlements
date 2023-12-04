@@ -19,34 +19,35 @@ object TransformService {
     rows <- CSVParser.parse(file.toPath)
   } yield ESDoc.parseESDocs(rows, fileId, provider, merchant)
 
-  def saveBatchSalesToPayoutReport(file: File, provider: String, merchant: String): ZIO[ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, List[BatchSalesToPayoutReportRow]] = {
+  def saveBatchSalesToPayoutReport(file: File, provider: String, merchant: String) = {
     for {
       esDocs <- parseESDocs(file, provider, merchant)
       batchReports = esDocs.map(BatchSalesToPayoutReportRow.fromESDocRaw)
       dao <- ZIO.service[ElasticSearchDAO[BatchSalesToPayoutReportRow]]
       response <- dao.addBulk(batchReports)
-      _ <- ZIO.logDebug(response.toString)
-    } yield batchReports
+      errors = response.result.items.map(_.error).collect{ case Some(e) => e }.map(_.reason)
+    } yield if (errors.isEmpty) Right(batchReports) else Left(errors)
   }
 
-  def saveSettlementDetailReport(file: File, provider: String, merchant: String): ZIO[ElasticSearchDAO[SettlementDetailReportRow], Throwable, List[SettlementDetailReportRow]] = {
+  def saveSettlementDetailReport(file: File, provider: String, merchant: String) = {
     for {
       esDocs <- parseESDocs(file, provider, merchant)
       settlementReports = esDocs.map(SettlementDetailReportRow.fromESDocRaw)
       dao <- ZIO.service[ElasticSearchDAO[SettlementDetailReportRow]]
       response <- dao.addBulk(settlementReports)
-      _ <- ZIO.logDebug(response.toString)
-    } yield settlementReports
+      errors = response.result.items.map(_.error).collect{ case Some(e) => e }.map(_.reason)
+    } yield if (errors.isEmpty) Right(settlementReports) else Left(errors)
   }
 
-  def saveMerchantPaymentTransactionsReport(file: File, provider: String, merchant: String): ZIO[ElasticSearchDAO[MerchantPaymentTransactionsReportRow], Throwable, List[MerchantPaymentTransactionsReportRow]] = {
+  def saveMerchantPaymentTransactionsReport(file: File, provider: String, merchant: String) = {
     for {
       esDocs <- parseESDocs(file, provider, merchant)
       settlementReports = esDocs.map(MerchantPaymentTransactionsReportRow.fromESDocRaw)
       dao <- ZIO.service[ElasticSearchDAO[MerchantPaymentTransactionsReportRow]]
       response <- dao.addBulk(settlementReports)
-      _ <- ZIO.logDebug(response.toString)
-    } yield settlementReports
+      errors = response.result.items.map(_.error).collect{ case Some(e) => e }.map(_.reason)
+    } yield if (errors.isEmpty) Right(settlementReports) else Left(errors)
   }
+
 
 }

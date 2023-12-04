@@ -14,13 +14,15 @@ import zio.json._
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import com.sksamuel.elastic4s.ElasticDsl._
+import com.sksamuel.elastic4s.requests.indexes.admin.DeleteIndexResponse
+import com.sksamuel.elastic4s.requests.mappings.MappingDefinition
 import zio.json.ast.Json
 
 import scala.util.{Failure, Success, Try}
 import java.time.LocalDateTime
 
 
-class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, reader: HitReader[T]) {
+class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, reader: HitReader[T], mapping: MappingDefinition) {
 
   implicit object IndexableHitreader extends HitReader[Json] {
     override def read(hit: Hit): Try[Json] =
@@ -75,14 +77,10 @@ class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String, r
     ).map(r => r.map(v => v.safeTo[T](reader)))
   }
 
-  def createIndices() = client.execute {
-    createIndex(indexName)
-  }
-
-  def add(jsonEntity: T) = client.execute {
-    indexInto(indexName)
-      .doc(jsonEntity)
-  }
+  def recreateIndex() = for {
+    _ <- client.execute(deleteIndex(this.indexName))
+    _ <- client.execute(createIndex(indexName).mapping(mapping))
+  } yield ()
 
   def addBulk(jsonEntities: List[T]) =
     client.execute {
@@ -101,21 +99,21 @@ object ElasticSearchDAO {
 
   private def createBatchSalesToPayout(client: ElasticClient): ElasticSearchDAO[BatchSalesToPayoutReportRow] = {
     val indexName = "batch_settlement_merchant_reports"
-    new ElasticSearchDAO[BatchSalesToPayoutReportRow](client, indexName, BatchSalesToPayoutReportRow.IndexableHitreader)
+    new ElasticSearchDAO[BatchSalesToPayoutReportRow](client, indexName, BatchSalesToPayoutReportRow.IndexableHitreader, BatchSalesToPayoutReportRow.mapping)
   }
 
   val liveSettlementDetail: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[SettlementDetailReportRow]] = ZLayer.fromFunction(createSettlementDetail _)
 
   private def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReportRow] = {
     val indexName = "detail_settlement_merchant_reports"
-    new ElasticSearchDAO[SettlementDetailReportRow](client, indexName, SettlementDetailReportRow.IndexableHitreader)
+    new ElasticSearchDAO[SettlementDetailReportRow](client, indexName, SettlementDetailReportRow.IndexableHitreader, SettlementDetailReportRow.mapping)
   }
 
   val liveMerchantPaymentTransactions: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[MerchantPaymentTransactionsReportRow]] = ZLayer.fromFunction(createMerchantPaymentTransactions _)
 
   private def createMerchantPaymentTransactions(client: ElasticClient): ElasticSearchDAO[MerchantPaymentTransactionsReportRow] = {
     val indexName = "merchant_payment_transactions_reports"
-    new ElasticSearchDAO[MerchantPaymentTransactionsReportRow](client, indexName, MerchantPaymentTransactionsReportRow.IndexableHitreader)
+    new ElasticSearchDAO[MerchantPaymentTransactionsReportRow](client, indexName, MerchantPaymentTransactionsReportRow.IndexableHitreader, MerchantPaymentTransactionsReportRow.mapping)
   }
 
 }
