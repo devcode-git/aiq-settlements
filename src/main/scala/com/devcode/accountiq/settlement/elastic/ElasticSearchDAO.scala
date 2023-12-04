@@ -1,11 +1,11 @@
 package com.devcode.accountiq.settlement.elastic
 
 import com.devcode.accountiq.settlement.elastic.reports.AIQField
-import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
+import com.devcode.accountiq.settlement.elastic.reports.batch.{BatchSalesToPayoutReportRow, BatchSalesToPayoutReportSummaryRow}
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateTimeConverter
-import com.sksamuel.elastic4s.{ElasticClient, ElasticDate, Indexable}
+import com.sksamuel.elastic4s.{ElasticClient, ElasticDate, HitReader, Indexable}
 import com.sksamuel.elastic4s.ElasticDsl._
 import com.sksamuel.elastic4s.zio.instances._
 import zio._
@@ -14,12 +14,34 @@ import zio.json._
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import com.sksamuel.elastic4s.ElasticDsl._
+import com.sksamuel.elastic4s.{Hit, HitReader, Indexable, Response}
+import zio.json.ast.Json
 
+import scala.util.{Failure, Success, Try}
 import java.sql.Timestamp
 import java.time.LocalDateTime
 
 
 class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String) {
+  
+  implicit object IndexableHitreader extends HitReader[Json] {
+    override def read(hit: Hit): Try[Json] =
+      if (hit.isSourceEmpty) {
+        Failure(new IllegalArgumentException(s"doc (id:${hit.id}) src is empty"))
+      } else {
+        val jsonVal = for {
+          entityJson <- hit.sourceAsString.fromJson[Json] // fromJson[BatchSalesToPayoutReportSummaryRow]
+          infoJson <- s"""{"_id": "${Some(hit.id)}", "version": {"_seq_no": ${hit.seqNo}, "_primary_term": ${hit.primaryTerm} } }""".fromJson[Json]
+        } yield entityJson.merge(infoJson)
+
+        jsonVal match {
+          case Right(j) => Success(j)
+          case Left(e) => Failure(new IllegalArgumentException(
+            s"failed to parse src ${hit.sourceAsString} errors: " + e
+          ))
+        }
+      }
+  }
 
   implicit lazy val global = ExecutionContext.fromExecutorService(
     Executors.newWorkStealingPool(10)
@@ -52,7 +74,7 @@ class ElasticSearchDAO[T: Indexable](client: ElasticClient, indexName: String) {
         )
         .limit(1000)
         .seqNoPrimaryTerm(true)
-    )
+    ).map(r => r.map( v => v.to[Json]))
   }
 
   def createIndices() = client.execute {

@@ -1,7 +1,7 @@
 package com.devcode.accountiq.settlement.elastic.reports.batch
 
 import com.devcode.accountiq.settlement.elastic.ESDoc
-import com.devcode.accountiq.settlement.elastic.reports.AIQField
+import com.devcode.accountiq.settlement.elastic.reports.{AIQField, Version}
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateConverter
 import com.sksamuel.elastic4s.ElasticApi.{dateField, properties}
 import com.sksamuel.elastic4s.ElasticDsl.keywordField
@@ -15,7 +15,9 @@ import java.util.Date
 
 trait BatchSalesToPayoutReportRow
 
-case class BatchSalesToPayoutReportSummaryRow(status: String,
+case class BatchSalesToPayoutReportSummaryRow(_id: Option[String] = None,
+                                              version: Option[Version] = None,
+                                              status: String,
                                               sales: Double,
                                               refunds: Double,
                                               salesRefund: Double,
@@ -88,6 +90,8 @@ object BatchSalesToPayoutReportRow {
     doc(BatchSalesToPayoutReportField.status) match {
       case status if status == "summary" =>
         BatchSalesToPayoutReportSummaryRow(
+          None,
+          None,
           status,
           doc(BatchSalesToPayoutReportField.sales).toDouble,
           doc(BatchSalesToPayoutReportField.refunds).toDouble,
