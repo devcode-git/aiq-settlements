@@ -1,6 +1,6 @@
 package com.devcode.accountiq.settlement.http
 
-import com.devcode.accountiq.settlement.elastic.ElasticSearchDAO
+import com.devcode.accountiq.settlement.elastic.dao.ElasticSearchDAO
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow

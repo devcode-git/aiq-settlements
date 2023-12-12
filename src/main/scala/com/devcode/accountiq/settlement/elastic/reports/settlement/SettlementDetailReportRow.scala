@@ -73,27 +73,6 @@ object SettlementDetailReportRow {
       keywordField("shopperReference")
   )
 
-  implicit object IndexableHitreader extends HitReader[SettlementDetailReportRow] {
-    override def read(hit: Hit): Try[SettlementDetailReportRow] =
-      if (hit.isSourceEmpty) {
-        Failure(new IllegalArgumentException(s"doc (id:${hit.id}) src is empty"))
-      } else {
-        val jsonVal = for {
-          entityJson <- hit.sourceAsString.fromJson[Json]
-          infoJson <- s"""{"_id": "${Some(hit.id)}", "version": {"_seq_no": ${hit.seqNo}, "_primary_term": ${hit.primaryTerm} } }""".fromJson[Json]
-        } yield entityJson.merge(infoJson)
-
-        jsonVal.flatMap { j =>
-          j.as[SettlementDetailReportRow]
-        } match {
-          case Right(j) => Success(j)
-          case Left(e) => Failure(new IllegalArgumentException(
-            s"failed to parse src ${hit.sourceAsString} errors: " + e
-          ))
-        }
-      }
-  }
-
   implicit val decoder: JsonDecoder[SettlementDetailReportRow] =
     DeriveJsonDecoder.gen[SettlementDetailReportRow]
 

@@ -59,27 +59,6 @@ object MerchantPaymentTransactionsReportRow {
     keywordField("jurisdiction")
   )
 
-  implicit object IndexableHitreader extends HitReader[MerchantPaymentTransactionsReportRow] {
-    override def read(hit: Hit): Try[MerchantPaymentTransactionsReportRow] =
-      if (hit.isSourceEmpty) {
-        Failure(new IllegalArgumentException(s"doc (id:${hit.id}) src is empty"))
-      } else {
-        val jsonVal = for {
-          entityJson <- hit.sourceAsString.fromJson[Json]
-          infoJson <- s"""{"_id": "${Some(hit.id)}", "version": {"_seq_no": ${hit.seqNo}, "_primary_term": ${hit.primaryTerm} } }""".fromJson[Json]
-        } yield entityJson.merge(infoJson)
-
-        jsonVal.flatMap { j =>
-          j.as[MerchantPaymentTransactionsReportRow]
-        } match {
-          case Right(j) => Success(j)
-          case Left(e) => Failure(new IllegalArgumentException(
-            s"failed to parse src ${hit.sourceAsString} errors: " + e
-          ))
-        }
-      }
-  }
-
   implicit val decoderMoney: JsonDecoder[Money] =
     DeriveJsonDecoder.gen[Money]
 
