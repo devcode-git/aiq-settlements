@@ -76,7 +76,7 @@ trait ElasticSearchDAO[T] {
       }
     }
 
-  def findByRefIds(refIds: List[String]) = {
+  def findByRefIds(refIds: List[Long]) = {
     client.execute(
       search(indexName)
         .query {

@@ -5,6 +5,7 @@ import zio._
 import zio.json._
 import zio.json.ast.Json
 import com.sksamuel.elastic4s._
+import com.sksamuel.elastic4s.requests.bulk.BulkResponse
 import com.sksamuel.elastic4s.requests.mappings.MappingDefinition
 
 import scala.util.{Failure, Success, Try}
@@ -19,7 +20,7 @@ class MerchantElasticSearchDAO(esClient: ElasticClient)
   val reader: HitReader[MerchantPaymentTransactionsReportRow] = IndexableHitReader
   val indexable: Indexable[MerchantPaymentTransactionsReportRow] = MerchantPaymentTransactionsReportRow.formatter
   val dateFieldName: String = "booked"
-  val refIdFieldName: String = "refId"
+  val refIdFieldName: String = "txRef"
 
   implicit object IndexableHitReader extends HitReader[MerchantPaymentTransactionsReportRow] {
     override def read(hit: Hit): Try[MerchantPaymentTransactionsReportRow] =
@@ -40,6 +41,23 @@ class MerchantElasticSearchDAO(esClient: ElasticClient)
           ))
         }
       }
+  }
+
+  override def addBulk(jsonEntities: List[MerchantPaymentTransactionsReportRow]): Task[Response[BulkResponse]] = {
+    val refIds = jsonEntities.map(_.txRef)
+    for {
+      _ <- ZIO.logInfo("Executing bulk add")
+      existingEntitiesRes <- this.findByRefIds(refIds)
+      existingEntitiesSeq <- ZIO.attempt(existingEntitiesRes.result.map {
+        case Success(v) => v
+      })
+      existingRefIds = existingEntitiesSeq.map(_.txRef)
+      (existingEntities, newEntities) = jsonEntities.partition(e => existingRefIds.contains(e.txRef))
+      _ <- ZIO.foreachDiscard(existingEntities) { ee =>
+        ZIO.logInfo(s"Skipping... Merchant entry with refId `${ee.txRef}` already exists")
+      }
+      res <- super.addBulk(newEntities)
+    } yield res
   }
 
 }

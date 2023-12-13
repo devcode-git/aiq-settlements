@@ -19,7 +19,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
   val reader: HitReader[SettlementDetailReportRow] = IndexableHitReader
   val indexable: Indexable[SettlementDetailReportRow] = SettlementDetailReportRow.formatter
   val dateFieldName: String = "creationDate"
-  val refIdFieldName: String = "refId"
+  val refIdFieldName: String = "merchantReference"
 
   implicit object IndexableHitReader extends HitReader[SettlementDetailReportRow] {
     override def read(hit: Hit): Try[SettlementDetailReportRow] =
@@ -40,6 +40,23 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
           ))
         }
       }
+  }
+
+  override def addBulk(jsonEntities: List[SettlementDetailReportRow]) = {
+    val refIds = jsonEntities.map(_.merchantReference)
+    for {
+      _ <- ZIO.logInfo("Executing bulk add")
+      existingEntitiesRes <- this.findByRefIds(refIds)
+      existingEntitiesSeq <- ZIO.attempt(existingEntitiesRes.result.map {
+        case Success(v) => v
+      })
+      existingRefIds = existingEntitiesSeq.map(_.merchantReference)
+      (existingEntities, newEntities) = jsonEntities.partition(e => existingRefIds.contains(e.merchantReference))
+      _ <- ZIO.foreachDiscard(existingEntities) { ee =>
+        ZIO.logInfo(s"Skipping... Settlement entry with refId `${ee.merchantReference}` already exists")
+      }
+      res <- super.addBulk(newEntities)
+    }  yield res
   }
 
 }

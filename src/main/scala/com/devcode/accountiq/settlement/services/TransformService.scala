@@ -35,8 +35,9 @@ object TransformService {
       settlementReports = esDocs.map(SettlementDetailReportRow.fromESDocRaw)
       dao <- ZIO.service[ElasticSearchDAO[SettlementDetailReportRow]]
       response <- dao.addBulk(settlementReports)
-      errors = response.result.items.map(_.error).collect{ case Some(e) => e }.map(_.reason)
-    } yield if (errors.isEmpty) Right(settlementReports) else Left(errors)
+//      errors = response.result.items.map(_.error).collect{ case Some(e) => e }.map(_.reason)
+      errors = response.toOption.map(_.items).map(_.map(_.error).collect{ case Some(e) => e }.map(_.reason))
+    } yield if (errors.isEmpty || errors.exists(_.isEmpty)) Right(settlementReports) else Left(errors)
   }
 
   def saveMerchantPaymentTransactionsReport(file: File, provider: String, merchant: String) = {
@@ -45,8 +46,8 @@ object TransformService {
       settlementReports = esDocs.map(MerchantPaymentTransactionsReportRow.fromESDocRaw)
       dao <- ZIO.service[ElasticSearchDAO[MerchantPaymentTransactionsReportRow]]
       response <- dao.addBulk(settlementReports)
-      errors = response.result.items.map(_.error).collect{ case Some(e) => e }.map(_.reason)
-    } yield if (errors.isEmpty) Right(settlementReports) else Left(errors)
+      errors = response.toOption.map(_.items).map(_.map(_.error).collect{ case Some(e) => e }.map(_.reason))
+    } yield if (errors.isEmpty || errors.exists(_.isEmpty)) Right(settlementReports) else Left(errors)
   }
 
 
