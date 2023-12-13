@@ -1,12 +1,16 @@
 package com.devcode.accountiq.settlement.elastic.dao
 
 import com.devcode.accountiq.settlement.elastic.reports.batch.{BatchSalesToPayoutPaidOutReportRow, BatchSalesToPayoutReportRow, BatchSalesToPayoutReportSummaryRow}
+import com.sksamuel.elastic4s.ElasticApi.{boolQuery, search, termQuery}
 import com.sksamuel.elastic4s.requests.mappings.MappingDefinition
 import zio._
 import zio.json._
 import zio.json.ast.Json
+import com.sksamuel.elastic4s.zio.instances._
 import com.sksamuel.elastic4s._
+import com.sksamuel.elastic4s.ElasticDsl._
 
+import java.time.LocalDateTime
 import scala.util.{Failure, Success, Try}
 
 
@@ -19,7 +23,7 @@ class BatchElasticSearchDAO(esClient: ElasticClient)
   val reader: HitReader[BatchSalesToPayoutReportRow] = IndexableHitReader
   val indexable: Indexable[BatchSalesToPayoutReportRow] = BatchSalesToPayoutReportRow.formatter
   val dateFieldName: String = "payoutDate"
-  val refIdFieldName: String = "refId"
+  val refIdFieldName: String = ""
 
   implicit object IndexableHitReader extends HitReader[BatchSalesToPayoutReportRow] {
     override def read(hit: Hit): Try[BatchSalesToPayoutReportRow] =
@@ -45,6 +49,44 @@ class BatchElasticSearchDAO(esClient: ElasticClient)
           ))
         }
       }
+  }
+
+  override def addBulk(jsonEntities: List[BatchSalesToPayoutReportRow]) = {
+    // skipping the summary fields, looks like they do not needed for settlement reconciliation
+    val paidOutReports = jsonEntities.collect {
+      case r: BatchSalesToPayoutPaidOutReportRow => r
+    }
+
+    for {
+      _ <- ZIO.logInfo("Executing bulk add")
+      existingEntitiesRes <- this.findDuplicates(paidOutReports.map(r => (r.payoutDate, r.paymentMethod)))
+      existingEntitiesSeq <- ZIO.attempt(existingEntitiesRes.result.map {
+        case Success(v) => v
+      })
+      existingRefIds = existingEntitiesSeq.collect {
+        case r: BatchSalesToPayoutPaidOutReportRow => (r.payoutDate, r.paymentMethod)
+      }
+      (existingEntities, newEntities) = paidOutReports.partition(e => existingRefIds.contains((e.payoutDate, e.paymentMethod)))
+      _ <- ZIO.foreachDiscard(existingEntities) { ee =>
+        ZIO.logInfo(s"Skipping... Settlement entry with payoutDate `${ee.payoutDate}` and paymentMethod `${ee.paymentMethod}` already exists")
+      }
+      res <- super.addBulk(newEntities)
+    } yield res
+  }
+
+  //TODO: combine with findByRefIds and refIdFieldName variable
+  def findDuplicates(refIds: Seq[(LocalDateTime, String)]) = {
+    client.execute(
+      search(indexName)
+        .query {
+          boolQuery()
+            .should(refIds.map(ref => termQuery("payoutDate", ref._1)))
+            .should(refIds.map(ref => termQuery("paymentMethod", ref._2)))
+            .minimumShouldMatch(1)
+        }
+        .seqNoPrimaryTerm(true)
+        .limit(1500)
+    ).map(r => r.map(v => v.safeTo[BatchSalesToPayoutReportRow](reader)))
   }
 
 }

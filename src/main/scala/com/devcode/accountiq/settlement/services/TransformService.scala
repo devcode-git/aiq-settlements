@@ -25,8 +25,8 @@ object TransformService {
       batchReports = esDocs.map(BatchSalesToPayoutReportRow.fromESDocRaw)
       dao <- ZIO.service[ElasticSearchDAO[BatchSalesToPayoutReportRow]]
       response <- dao.addBulk(batchReports)
-      errors = response.result.items.map(_.error).collect{ case Some(e) => e }.map(_.reason)
-    } yield if (errors.isEmpty) Right(batchReports) else Left(errors)
+      errors = response.toOption.map(_.items).map(_.map(_.error).collect{ case Some(e) => e }.map(_.reason))
+    } yield if (errors.isEmpty || errors.exists(_.isEmpty)) Right(batchReports) else Left(errors)
   }
 
   def saveSettlementDetailReport(file: File, provider: String, merchant: String) = {

@@ -1,8 +1,8 @@
 package com.devcode.accountiq.settlement.elastic.dao
 
-import _root_.zio._
-import _root_.zio.json._
-import _root_.zio.json.ast.Json
+import zio._
+import zio.json._
+import zio.json.ast.Json
 import com.devcode.accountiq.settlement.elastic.reports.AIQField
 import com.devcode.accountiq.settlement.util.DateUtil.LocalDateTimeConverter
 import com.sksamuel.elastic4s.ElasticDsl._
