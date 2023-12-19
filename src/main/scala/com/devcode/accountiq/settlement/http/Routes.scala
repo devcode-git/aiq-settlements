@@ -26,7 +26,7 @@ class Routes(batchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow],
   private val batchReports =
     endpoint.post
       .in("batchReports" / path[String] / path[String] / query[Option[Int]]("days") / stringJsonBody)
-      .out(plainBody[String])
+      .out(stringJsonBody)
       .zServerLogic { case (merchant, provider, days, timeFrame) =>
       for {
         dateRange <- getTimeFrame(days, timeFrame)
@@ -38,7 +38,7 @@ class Routes(batchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow],
   private val merchantReports =
     endpoint.post
       .in("merchantReports" / path[String] / path[String] / query[Option[Int]]("days") / stringJsonBody)
-      .out(plainBody[String])
+      .out(stringJsonBody)
       .zServerLogic { case (merchant, provider, days, timeFrame) =>
       for {
         dateRange <- getTimeFrame(days, timeFrame)
@@ -50,7 +50,7 @@ class Routes(batchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow],
   private val settlementReports =
     endpoint.post
       .in("settlementReports" / path[String] / path[String] / query[Option[Int]]("days") / stringJsonBody)
-      .out(plainBody[String])
+      .out(stringJsonBody)
       .zServerLogic { case (merchant, provider, days, timeFrame) =>
       for {
         dateRange <- getTimeFrame(days, timeFrame)
