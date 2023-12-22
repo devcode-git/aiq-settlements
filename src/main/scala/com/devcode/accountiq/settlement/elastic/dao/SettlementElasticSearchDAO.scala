@@ -46,35 +46,24 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
   }
 
   override def addBulk(jsonEntities: List[SettlementDetailReport]) = {
-    // SettlementDetailReportMerchantPayoutRow
-    // SettlementDetailReportFeeRow
-    val settlementReports: List[SettlementDetailReportRow] = jsonEntities.collect {
-      case r: SettlementDetailReportRow => r
-    }
-    val settlementPayoutReports: List[SettlementDetailReportMerchantPayoutRow] = jsonEntities.collect {
-      case r: SettlementDetailReportMerchantPayoutRow => r
-    }
-    val settlementFeeReports: List[SettlementDetailReportFeeRow] = jsonEntities.collect {
-      case r: SettlementDetailReportFeeRow => r
-    }
+    val settlementReports: List[SettlementDetailReportRow] = jsonEntities.collect { case r: SettlementDetailReportRow => r }
+    val settlementPayoutReports: List[SettlementDetailReportMerchantPayoutRow] = jsonEntities.collect { case r: SettlementDetailReportMerchantPayoutRow => r }
+    val settlementFeeReports: List[SettlementDetailReportFeeRow] = jsonEntities.collect { case r: SettlementDetailReportFeeRow => r }
 
     for {
-      _ <- ZIO.logInfo("Executing bulk add")
+      _ <- ZIO.logInfo("[SettlementElasticSearchDAO] Executing bulk addBulk")
+
       newSettlementReports <- removeSettlementDuplicates(settlementReports)
       newSettlementPayoutReports <- removeSettlementPayoutDuplicates(settlementPayoutReports)
       newSettlementFeeReports <- removeSettlementFeeDuplicates(settlementFeeReports)
       newReports = newSettlementReports ++ newSettlementPayoutReports ++ newSettlementFeeReports
 
       res <- super.addBulk(newReports)
-      _ <- ZIO.foreachDiscard(newSettlementReports) { ee =>
-        ZIO.logInfo(s"Adding settlement report entry with refId `${ee.merchantReference}`")
-      }
-      _ <- ZIO.foreachDiscard(newSettlementPayoutReports) { ee =>
-        ZIO.logInfo(s"Adding settlement payout report entry with type `${ee.`type`}` and date ${ee.creationDate}")
-      }
-      _ <- ZIO.foreachDiscard(newSettlementFeeReports) { ee =>
-        ZIO.logInfo(s"Adding settlement fee report entry with type `${ee.`type`}` and date ${ee.creationDate}")
-      }
+
+      _ <- logEntries(newSettlementReports, (ee: SettlementDetailReportRow) => s"Adding settlement report entry with refId `${ee.merchantReference}`")
+      _ <- logEntries(newSettlementPayoutReports, (ee: SettlementDetailReportMerchantPayoutRow) => s"Adding settlement payout report entry with type `${ee.`type`}` and date ${ee.creationDate}")
+      _ <- logEntries(newSettlementFeeReports, (ee: SettlementDetailReportFeeRow) => s"Adding settlement fee report entry with type `${ee.`type`}` and date ${ee.creationDate}")
+
     }  yield res
   }
 
@@ -111,9 +100,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
         case v if v.isInstanceOf[SettlementDetailReportRow] => v.asInstanceOf[SettlementDetailReportRow].merchantReference
       })
       (existingEntities, newEntities) = settlementReports.partition(e => existingRefIds.contains(e.merchantReference))
-      _ <- ZIO.foreachDiscard(existingEntities) { ee =>
-        ZIO.logInfo(s"Skipping... Settlement entry [SettlementDetailReportRow] with refId `${ee.merchantReference}` already exists")
-      }
+      _ <- logEntries(existingEntities, (ee: SettlementDetailReportRow) => s"Skipping... Settlement entry [SettlementDetailReportRow] with refId `${ee.merchantReference}` already exists")
     } yield newEntities
   }
 
@@ -126,9 +113,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
           (v.asInstanceOf[SettlementDetailReportMerchantPayoutRow].`type`, v.asInstanceOf[SettlementDetailReportMerchantPayoutRow].creationDate)
       })
       (existingEntities, newEntities) = settlementReports.partition(r => existingData.contains((r.`type`, r.creationDate)))
-      _ <- ZIO.foreachDiscard(existingEntities) { ee =>
-        ZIO.logInfo(s"Skipping... Settlement entry [SettlementDetailReportMerchantPayoutRow] with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
-      }
+      _ <- logEntries(existingEntities, (ee: SettlementDetailReportMerchantPayoutRow) => s"Skipping... Settlement entry [SettlementDetailReportMerchantPayoutRow] with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
     } yield newEntities
   }
 
@@ -141,9 +126,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
           (v.asInstanceOf[SettlementDetailReportFeeRow].`type`, v.asInstanceOf[SettlementDetailReportFeeRow].creationDate)
       })
       (existingEntities, newEntities) = settlementReports.partition(r => existingData.contains((r.`type`, r.creationDate)))
-      _ <- ZIO.foreachDiscard(existingEntities) { ee =>
-        ZIO.logInfo(s"Skipping... Settlement entry [SettlementDetailReportFeeRow] with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
-      }
+      _ <- logEntries(existingEntities, (ee: SettlementDetailReportFeeRow) => s"Skipping... Settlement entry [SettlementDetailReportFeeRow] with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
     } yield newEntities
   }
 
@@ -153,13 +136,11 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
     })
   }
 
-//  private def logEntries[T](entities: List[T], message:T => String) = {
-//    for {
-//      _ <- ZIO.foreachDiscard(entities) { ee =>
-//        ZIO.logInfo(s"Skipping... Settlement entry [SettlementDetailReportFeeRow] with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
-//      }
-//    } yield ()
-//  }
+  private def logEntries[T](entities: List[T], message: T => String) = {
+    for {
+      _ <- ZIO.foreachDiscard(entities) { ee => ZIO.logInfo(message(ee)) }
+    } yield ()
+  }
 
 }
 
