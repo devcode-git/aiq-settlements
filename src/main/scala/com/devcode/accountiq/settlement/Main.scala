@@ -3,7 +3,7 @@ package com.devcode.accountiq.settlement
 import com.devcode.accountiq.settlement.config.AppConfig
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
-import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
+import com.devcode.accountiq.settlement.elastic.reports.settlement.{SettlementDetailReport, SettlementDetailReportRow}
 import com.devcode.accountiq.settlement.elastic.ElasticSearchClient
 import com.devcode.accountiq.settlement.elastic.dao.{BatchElasticSearchDAO, ElasticSearchDAO, MerchantElasticSearchDAO, SettlementElasticSearchDAO}
 import com.devcode.accountiq.settlement.elastic.reports.ESDoc
@@ -43,7 +43,7 @@ object Main extends ZIOAppDefault {
     ElasticConfig.live
   )
 
-  private val settlementReportsElasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[SettlementDetailReportRow]] = ZLayer.make[ElasticSearchDAO[SettlementDetailReportRow]](
+  private val settlementReportsElasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[SettlementDetailReport]] = ZLayer.make[ElasticSearchDAO[SettlementDetailReport]](
     ElasticSearchClient.live,
     SettlementElasticSearchDAO.live,
     ElasticConfig.live
@@ -63,10 +63,10 @@ object Main extends ZIOAppDefault {
     "home/upload",
     "/Users/white/Desktop/win"))
 
-  private def recreateIndexes(): ZIO[ElasticSearchDAO[MerchantPaymentTransactionsReportRow] with ElasticSearchDAO[SettlementDetailReportRow] with ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, Unit] = for {
+  private def recreateIndexes(): ZIO[ElasticSearchDAO[MerchantPaymentTransactionsReportRow] with ElasticSearchDAO[SettlementDetailReport] with ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, Unit] = for {
     batchSalesToPayoutReportRow <- ZIO.service[ElasticSearchDAO[BatchSalesToPayoutReportRow]]
     _ <- batchSalesToPayoutReportRow.recreateIndex()
-    settlementDetailReportRow <- ZIO.service[ElasticSearchDAO[SettlementDetailReportRow]]
+    settlementDetailReportRow <- ZIO.service[ElasticSearchDAO[SettlementDetailReport]]
     _ <- settlementDetailReportRow.recreateIndex()
     merchantPaymentTransactionsReportRow <- ZIO.service[ElasticSearchDAO[MerchantPaymentTransactionsReportRow]]
     _ <- merchantPaymentTransactionsReportRow.recreateIndex()
@@ -91,19 +91,15 @@ object Main extends ZIOAppDefault {
 //        case Left(e) => ZIO.logError(e.mkString(","))
 //      }
 
-//      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
-//      reports <- TransformService.saveSettlementDetailReport(settlementPath, "adyen", "kindred").provide(settlementReportsElasticDAO)
+      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
+      reports <- TransformService.saveSettlementDetailReport(settlementPath, "adyen", "kindred").provide(settlementReportsElasticDAO)
+
+//      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
+//      reports <- TransformService.saveMerchantPaymentTransactionsReport(merchantPaymentTransactions, "adyen", "kindred").provide(merchantPaymentTransactionsReportsElasticDAO)
 //      _ <- reports match {
 //        case Right(s) => ZIO.logInfo(s.mkString(","))
 //        case Left(e) => ZIO.logError(e.mkString(","))
 //      }
-
-      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
-      reports <- TransformService.saveMerchantPaymentTransactionsReport(merchantPaymentTransactions, "adyen", "kindred").provide(merchantPaymentTransactionsReportsElasticDAO)
-      _ <- reports match {
-        case Right(s) => ZIO.logInfo(s.mkString(","))
-        case Left(e) => ZIO.logError(e.mkString(","))
-      }
 
     } yield ())
 

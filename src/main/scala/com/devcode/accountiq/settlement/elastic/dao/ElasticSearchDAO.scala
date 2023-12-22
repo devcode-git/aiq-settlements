@@ -9,6 +9,7 @@ import com.sksamuel.elastic4s.ElasticDsl._
 import com.sksamuel.elastic4s._
 import com.sksamuel.elastic4s.requests.bulk.BulkResponse
 import com.sksamuel.elastic4s.requests.mappings.MappingDefinition
+import com.sksamuel.elastic4s.requests.searches.queries.compound.BoolQuery
 import com.sksamuel.elastic4s.zio.instances._
 
 import java.time.LocalDateTime
@@ -25,7 +26,7 @@ trait ElasticSearchDAO[T] {
   val dateFieldName: String
   val refIdFieldName: String
 
-  implicit object IndexableHitreader extends HitReader[Json] {
+  implicit object JsonReader extends HitReader[Json] {
 
     override def read(hit: Hit): Try[Json] =
       if (hit.isSourceEmpty) {
@@ -87,6 +88,15 @@ trait ElasticSearchDAO[T] {
         .seqNoPrimaryTerm(true)
         .limit(1500)
     ).map(r => r.map(v => v.safeTo[T](reader)))
+  }
+
+  def findByQuery(query: BoolQuery) = {
+    client.execute(
+      search(indexName)
+        .query(query)
+        .seqNoPrimaryTerm(true)
+        .limit(1500)
+    ).map(r => r.map(v => v.safeTo[Json](JsonReader)))
   }
 
 }
