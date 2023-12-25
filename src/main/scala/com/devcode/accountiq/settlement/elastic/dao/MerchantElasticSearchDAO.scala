@@ -1,6 +1,8 @@
 package com.devcode.accountiq.settlement.elastic.dao
 
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
+import com.sksamuel.elastic4s.ElasticApi.termQuery
+import com.sksamuel.elastic4s.ElasticDsl.boolQuery
 import zio._
 import zio.json._
 import zio.json.ast.Json
@@ -45,12 +47,12 @@ class MerchantElasticSearchDAO(esClient: ElasticClient)
 
   override def addBulk(jsonEntities: List[MerchantPaymentTransactionsReportRow]): Task[Response[BulkResponse]] = {
     val refIds = jsonEntities.map(_.txRef)
+    val refQuery = boolQuery()
+      .should(refIds.map(id => termQuery("txRef", id)))
+      .minimumShouldMatch(1)
     for {
       _ <- ZIO.logInfo("[MerchantElasticSearchDAO] Executing bulk add")
-      existingEntitiesRes <- this.findByRefIds(refIds)
-      existingEntitiesSeq <- ZIO.attempt(existingEntitiesRes.result.map {
-        case Success(v) => v
-      })
+      existingEntitiesSeq <- this.findByQuery(refQuery)
       existingRefIds = existingEntitiesSeq.map(_.txRef)
       (existingEntities, newEntities) = jsonEntities.partition(e => existingRefIds.contains(e.txRef))
       _ <- ZIO.foreachDiscard(existingEntities) { ee =>

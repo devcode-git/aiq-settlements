@@ -77,19 +77,6 @@ trait ElasticSearchDAO[T] {
       }
     }
 
-  def findByRefIds(refIds: List[Long]) = {
-    client.execute(
-      search(indexName)
-        .query {
-          boolQuery()
-            .should(refIds.map(id => termQuery(refIdFieldName, id)))
-            .minimumShouldMatch(1)
-        }
-        .seqNoPrimaryTerm(true)
-        .limit(1500)
-    ).map(r => r.map(v => v.safeTo[T](reader)))
-  }
-
   def findByQuery(query: BoolQuery): ZIO[Any, Throwable, IndexedSeq[T]] = {
     client.execute(
       search(indexName)

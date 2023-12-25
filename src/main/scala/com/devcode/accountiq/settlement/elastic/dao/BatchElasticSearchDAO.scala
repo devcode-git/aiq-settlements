@@ -57,12 +57,15 @@ class BatchElasticSearchDAO(esClient: ElasticClient)
       case r: BatchSalesToPayoutPaidOutReportRow => r
     }
 
+    val refIds = paidOutReports.map(r => (r.payoutDate, r.paymentMethod))
+    val query = boolQuery()
+      .should(refIds.map(ref => termQuery("payoutDate", ref._1)))
+      .should(refIds.map(ref => termQuery("paymentMethod", ref._2)))
+      .minimumShouldMatch(1)
+
     for {
       _ <- ZIO.logInfo("[BatchElasticSearchDAO] Executing bulk add")
-      existingEntitiesRes <- this.findDuplicates(paidOutReports.map(r => (r.payoutDate, r.paymentMethod)))
-      existingEntitiesSeq <- ZIO.attempt(existingEntitiesRes.result.map {
-        case Success(v) => v
-      })
+      existingEntitiesSeq <- findByQuery(query)
       existingRefIds = existingEntitiesSeq.collect {
         case r: BatchSalesToPayoutPaidOutReportRow => (r.payoutDate, r.paymentMethod)
       }
@@ -73,21 +76,6 @@ class BatchElasticSearchDAO(esClient: ElasticClient)
       res <- super.addBulk(newEntities)
       _ <- logEntries(newEntities, (ee: BatchSalesToPayoutPaidOutReportRow) => s"[BatchElasticSearchDAO] Adding batch report row with payoutDate `${ee.payoutDate}` and paymentMethod `${ee.paymentMethod}`")
     } yield res
-  }
-
-  //TODO: combine with findByRefIds and refIdFieldName variable
-  def findDuplicates(refIds: Seq[(LocalDateTime, String)]) = {
-    client.execute(
-      search(indexName)
-        .query {
-          boolQuery()
-            .should(refIds.map(ref => termQuery("payoutDate", ref._1)))
-            .should(refIds.map(ref => termQuery("paymentMethod", ref._2)))
-            .minimumShouldMatch(1)
-        }
-        .seqNoPrimaryTerm(true)
-        .limit(1500)
-    ).map(r => r.map(v => v.safeTo[BatchSalesToPayoutReportRow](reader)))
   }
 
 }
