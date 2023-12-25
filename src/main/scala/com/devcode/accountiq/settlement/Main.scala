@@ -82,24 +82,19 @@ object Main extends ZIOAppDefault {
 //      _ <- SftpDownloader.downloadAccount().provideLayer(sftpAccount)
 //      _ <- createIndex().provide(elasticDAO)
 
-//      _ <- recreateIndexes()
-//
-//      batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
-//      reports <- TransformService.saveBatchSalesToPayoutReport(batchPath, "adyen", "kindred").provide(batchReportsElasticDAO)
-//      _ <- reports match {
-//        case Right(s) => ZIO.logInfo(s.mkString(","))
-//        case Left(e) => ZIO.logError(e.mkString(","))
-//      }
+      _ <- recreateIndexes()
+
+      batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
+      _ <- TransformService.saveReports[BatchSalesToPayoutReportRow](batchPath, "adyen", "kindred", BatchSalesToPayoutReportRow.fromESDocRaw)
+        .provide(batchReportsElasticDAO)
 
       settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
-      reports <- TransformService.saveSettlementDetailReport(settlementPath, "adyen", "kindred").provide(settlementReportsElasticDAO)
+      _ <- TransformService.saveReports[SettlementDetailReport](settlementPath, "adyen", "kindred", SettlementDetailReport.fromESDocRaw)
+        .provide(settlementReportsElasticDAO)
 
-//      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
-//      reports <- TransformService.saveMerchantPaymentTransactionsReport(merchantPaymentTransactions, "adyen", "kindred").provide(merchantPaymentTransactionsReportsElasticDAO)
-//      _ <- reports match {
-//        case Right(s) => ZIO.logInfo(s.mkString(","))
-//        case Left(e) => ZIO.logError(e.mkString(","))
-//      }
+      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
+      _ <- TransformService.saveReports[MerchantPaymentTransactionsReportRow](merchantPaymentTransactions, "adyen", "kindred", MerchantPaymentTransactionsReportRow.fromESDocRaw)
+        .provide(merchantPaymentTransactionsReportsElasticDAO)
 
     } yield ())
 

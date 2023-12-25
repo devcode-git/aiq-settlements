@@ -46,7 +46,7 @@ class MerchantElasticSearchDAO(esClient: ElasticClient)
   override def addBulk(jsonEntities: List[MerchantPaymentTransactionsReportRow]): Task[Response[BulkResponse]] = {
     val refIds = jsonEntities.map(_.txRef)
     for {
-      _ <- ZIO.logInfo("Executing bulk add")
+      _ <- ZIO.logInfo("[MerchantElasticSearchDAO] Executing bulk add")
       existingEntitiesRes <- this.findByRefIds(refIds)
       existingEntitiesSeq <- ZIO.attempt(existingEntitiesRes.result.map {
         case Success(v) => v
@@ -54,9 +54,10 @@ class MerchantElasticSearchDAO(esClient: ElasticClient)
       existingRefIds = existingEntitiesSeq.map(_.txRef)
       (existingEntities, newEntities) = jsonEntities.partition(e => existingRefIds.contains(e.txRef))
       _ <- ZIO.foreachDiscard(existingEntities) { ee =>
-        ZIO.logInfo(s"Skipping... Merchant entry with refId `${ee.txRef}` already exists")
+        ZIO.logInfo(s"[MerchantElasticSearchDAO] Skipping... Merchant report row with txRef `${ee.txRef}` already exists")
       }
       res <- super.addBulk(newEntities)
+      _ <- logEntries(newEntities, (ee: MerchantPaymentTransactionsReportRow) => s"[MerchantElasticSearchDAO] Adding merchant report row with txRef `${ee.txRef}`")
     } yield res
   }
 

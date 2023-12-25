@@ -108,6 +108,12 @@ trait ElasticSearchDAO[T] {
       }
   }
 
+  protected def logEntries[R](entities: List[R], message: R => String): ZIO[Any, Nothing, Unit] = {
+    for {
+      _ <- ZIO.foreachDiscard(entities) { ee => ZIO.logInfo(message(ee)) }
+    } yield ()
+  }
+
 }
 
 object ElasticSearchDAO {

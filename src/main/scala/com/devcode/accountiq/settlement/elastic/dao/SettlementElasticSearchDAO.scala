@@ -64,9 +64,9 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
 
       res <- super.addBulk(newReports)
 
-      _ <- logEntries(newSettlementReports, (ee: SettlementDetailReportRow) => s"Adding settlement report entry with refId `${ee.merchantReference}`")
-      _ <- logEntries(newSettlementPayoutReports, (ee: SettlementDetailReportMerchantPayoutRow) => s"Adding settlement payout report entry with type `${ee.`type`}` and date ${ee.creationDate}")
-      _ <- logEntries(newSettlementFeeReports, (ee: SettlementDetailReportFeeRow) => s"Adding settlement fee report entry with type `${ee.`type`}` and date ${ee.creationDate}")
+      _ <- logEntries(newSettlementReports, (ee: SettlementDetailReportRow) => s"[SettlementElasticSearchDAO] Adding settlement report entry with refId `${ee.merchantReference}`")
+      _ <- logEntries(newSettlementPayoutReports, (ee: SettlementDetailReportMerchantPayoutRow) => s"[SettlementElasticSearchDAO] Adding settlement payout report entry with type `${ee.`type`}` and date ${ee.creationDate}")
+      _ <- logEntries(newSettlementFeeReports, (ee: SettlementDetailReportFeeRow) => s"[SettlementElasticSearchDAO] Adding settlement fee report entry with type `${ee.`type`}` and date ${ee.creationDate}")
 
     }  yield res
   }
@@ -81,7 +81,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
         case v if v.isInstanceOf[SettlementDetailReportRow] => v.asInstanceOf[SettlementDetailReportRow].merchantReference
       })
       (existingEntities, newEntities) = settlementReports.partition(e => existingRefIds.contains(e.merchantReference))
-      _ <- logEntries(existingEntities, (ee: SettlementDetailReportRow) => s"Skipping... Settlement entry [SettlementDetailReportRow] with refId `${ee.merchantReference}` already exists")
+      _ <- logEntries(existingEntities, (ee: SettlementDetailReportRow) => s"[SettlementElasticSearchDAO] Skipping... Settlement entry SettlementDetailReportRow with refId `${ee.merchantReference}` already exists")
     } yield newEntities
   }
 
@@ -94,7 +94,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
           (v.asInstanceOf[SettlementDetailReportMerchantPayoutRow].`type`, v.asInstanceOf[SettlementDetailReportMerchantPayoutRow].creationDate)
       })
       (existingEntities, newEntities) = settlementReports.partition(r => existingData.contains((r.`type`, r.creationDate)))
-      _ <- logEntries(existingEntities, (ee: SettlementDetailReportMerchantPayoutRow) => s"Skipping... Settlement entry [SettlementDetailReportMerchantPayoutRow] with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
+      _ <- logEntries(existingEntities, (ee: SettlementDetailReportMerchantPayoutRow) => s"[SettlementElasticSearchDAO] Skipping... Settlement entry SettlementDetailReportMerchantPayoutRow with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
     } yield newEntities
   }
 
@@ -107,7 +107,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
           (v.asInstanceOf[SettlementDetailReportFeeRow].`type`, v.asInstanceOf[SettlementDetailReportFeeRow].creationDate)
       })
       (existingEntities, newEntities) = settlementReports.partition(r => existingData.contains((r.`type`, r.creationDate)))
-      _ <- logEntries(existingEntities, (ee: SettlementDetailReportFeeRow) => s"Skipping... Settlement entry [SettlementDetailReportFeeRow] with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
+      _ <- logEntries(existingEntities, (ee: SettlementDetailReportFeeRow) => s"[SettlementElasticSearchDAO] Skipping... Settlement entry SettlementDetailReportFeeRow with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
     } yield newEntities
   }
 
@@ -115,12 +115,6 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
     boolQuery().should(tuples.map { case (reportType, creationDate) =>
       boolQuery().should(boolQuery().should(termQuery("type", reportType)), boolQuery().should(termQuery("creationDate", creationDate))).minimumShouldMatch(1)
     })
-  }
-
-  private def logEntries[T](entities: List[T], message: T => String) = {
-    for {
-      _ <- ZIO.foreachDiscard(entities) { ee => ZIO.logInfo(message(ee)) }
-    } yield ()
   }
 
 }

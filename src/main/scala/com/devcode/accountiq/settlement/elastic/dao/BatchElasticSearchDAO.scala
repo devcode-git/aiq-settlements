@@ -58,7 +58,7 @@ class BatchElasticSearchDAO(esClient: ElasticClient)
     }
 
     for {
-      _ <- ZIO.logInfo("Executing bulk add")
+      _ <- ZIO.logInfo("[BatchElasticSearchDAO] Executing bulk add")
       existingEntitiesRes <- this.findDuplicates(paidOutReports.map(r => (r.payoutDate, r.paymentMethod)))
       existingEntitiesSeq <- ZIO.attempt(existingEntitiesRes.result.map {
         case Success(v) => v
@@ -68,9 +68,10 @@ class BatchElasticSearchDAO(esClient: ElasticClient)
       }
       (existingEntities, newEntities) = paidOutReports.partition(e => existingRefIds.contains((e.payoutDate, e.paymentMethod)))
       _ <- ZIO.foreachDiscard(existingEntities) { ee =>
-        ZIO.logInfo(s"Skipping... Settlement entry with payoutDate `${ee.payoutDate}` and paymentMethod `${ee.paymentMethod}` already exists")
+        ZIO.logInfo(s"[BatchElasticSearchDAO] Skipping... Batch report row with payoutDate `${ee.payoutDate}` and paymentMethod `${ee.paymentMethod}` already exists")
       }
       res <- super.addBulk(newEntities)
+      _ <- logEntries(newEntities, (ee: BatchSalesToPayoutPaidOutReportRow) => s"[BatchElasticSearchDAO] Adding batch report row with payoutDate `${ee.payoutDate}` and paymentMethod `${ee.paymentMethod}`")
     } yield res
   }
 
