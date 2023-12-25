@@ -90,13 +90,22 @@ trait ElasticSearchDAO[T] {
     ).map(r => r.map(v => v.safeTo[T](reader)))
   }
 
-  def findByQuery(query: BoolQuery) = {
+  def findByQuery(query: BoolQuery): ZIO[Any, Throwable, IndexedSeq[T]] = {
     client.execute(
       search(indexName)
         .query(query)
         .seqNoPrimaryTerm(true)
         .limit(1500)
-    ).map(r => r.map(v => v.safeTo[Json](JsonReader)))
+    ).map(r => r.map(v => v.safeTo[T](reader)))
+      .map(_.result)
+      .flatMap { entities =>
+        val (successJsons, failureJsons) = entities.partition(_.isSuccess)
+        val failureMsg = failureJsons.collect {
+          case Failure(exception) => exception.getMessage
+        }
+        ZIO.when(failureMsg.nonEmpty)(ZIO.logError(s"Could not parse entity: $failureMsg")) *>
+          ZIO.succeed(successJsons.collect { case Success(v) => v })
+      }
   }
 
 }

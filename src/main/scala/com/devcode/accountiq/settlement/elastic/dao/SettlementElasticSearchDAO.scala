@@ -35,7 +35,11 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
         } yield entityJson.merge(infoJson)
 
         jsonVal.flatMap { j =>
-          j.as[SettlementDetailReport]
+          j.asInstanceOf[Json.Obj].get("type").flatMap(_.asString) match {
+            case Some("Fee") => j.as[SettlementDetailReportFeeRow]
+            case Some("MerchantPayout") => j.as[SettlementDetailReportMerchantPayoutRow]
+            case Some(_) => j.as[SettlementDetailReportRow]
+          }
         } match {
           case Right(j) => Success(j)
           case Left(e) => Failure(new IllegalArgumentException(
@@ -67,35 +71,12 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
     }  yield res
   }
 
-  private def findEntriesByQuery(query: BoolQuery): ZIO[Any, Throwable, IndexedSeq[SettlementDetailReport]] = {
-    for {
-      jsons <- super.findByQuery(query)
-      (successJsons, failureJsons) = jsons.result.partition(_.isSuccess)
-      failureMsg = failureJsons.collect {
-        case Failure(exception) => exception.getMessage
-      }
-      _ <- ZIO.when(failureMsg.nonEmpty)(ZIO.logError(s"Could not parse settlement detail reports: $failureMsg"))
-
-      reports = successJsons.collect {
-        case Success(v) => v
-      }.map { r =>
-        (r.asInstanceOf[Json.Obj].get("type").flatMap(_.asString) match {
-          case Some("Fee") => r.as[SettlementDetailReportFeeRow]
-          case Some("MerchantPayout") => r.as[SettlementDetailReportMerchantPayoutRow]
-          case Some(_) => r.as[SettlementDetailReportRow]
-        }) match {
-          case Right(v) => v
-        }
-      }
-    } yield reports
-  }
-
   private def removeSettlementDuplicates(settlementReports: List[SettlementDetailReportRow]): Task[List[SettlementDetailReportRow]] = {
     val findQuery: BoolQuery = boolQuery()
       .should(settlementReports.map(_.merchantReference).map(id => termQuery(refIdFieldName, id)))
       .minimumShouldMatch(1)
     for {
-      existingEntitiesRes <- this.findEntriesByQuery(findQuery)
+      existingEntitiesRes <- this.findByQuery(findQuery)
       existingRefIds <- ZIO.attempt(existingEntitiesRes.collect {
         case v if v.isInstanceOf[SettlementDetailReportRow] => v.asInstanceOf[SettlementDetailReportRow].merchantReference
       })
@@ -107,7 +88,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
   private def removeSettlementPayoutDuplicates(settlementReports: List[SettlementDetailReportMerchantPayoutRow]): Task[List[SettlementDetailReportMerchantPayoutRow]] = {
     val findQuery = typeCreationDateQuery(settlementReports.map(r => (r.`type`, r.creationDate)))
     for {
-      existingEntitiesRes <- this.findEntriesByQuery(findQuery)
+      existingEntitiesRes <- this.findByQuery(findQuery)
       existingData <- ZIO.attempt(existingEntitiesRes.collect {
         case v if v.isInstanceOf[SettlementDetailReportMerchantPayoutRow] =>
           (v.asInstanceOf[SettlementDetailReportMerchantPayoutRow].`type`, v.asInstanceOf[SettlementDetailReportMerchantPayoutRow].creationDate)
@@ -120,7 +101,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
   private def removeSettlementFeeDuplicates(settlementReports: List[SettlementDetailReportFeeRow]): Task[List[SettlementDetailReportFeeRow]] = {
     val findQuery = typeCreationDateQuery(settlementReports.map(r => (r.`type`, r.creationDate)))
     for {
-      existingEntitiesRes <- this.findEntriesByQuery(findQuery)
+      existingEntitiesRes <- this.findByQuery(findQuery)
       existingData <- ZIO.attempt(existingEntitiesRes.collect {
         case v if v.isInstanceOf[SettlementDetailReportFeeRow] =>
           (v.asInstanceOf[SettlementDetailReportFeeRow].`type`, v.asInstanceOf[SettlementDetailReportFeeRow].creationDate)
