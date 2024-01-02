@@ -4,6 +4,22 @@ import zio.{Config, ConfigProvider, ZIO, ZLayer}
 
 import scala.annotation.nowarn
 import scala.util.{Success, Try}
+import zio.config.magnolia.deriveConfig
+
+final case class ElasticConfig(mode: String, remote: Remote, local: Local)
+
+final case class Remote(url: String,
+                        username: String,
+                        password: String,
+                        maxConnTotal: Int,
+                        maxConnPerRoute: Int)
+
+final case class Local(host: String, port: Int)
+
+object ElasticConfig {
+  val config: Config[ElasticConfig] = deriveConfig[ElasticConfig].nested("ElasticConfig")
+  val live = ZLayer.fromZIO(ZIO.config[ElasticConfig](ElasticConfig.config))
+}
 
 package object config {
 
