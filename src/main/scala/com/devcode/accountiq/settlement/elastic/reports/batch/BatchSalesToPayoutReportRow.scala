@@ -16,57 +16,22 @@ import java.time.LocalDateTime
 import java.util.Date
 import scala.util.{Failure, Success, Try}
 
-sealed trait BatchSalesToPayoutReportRow
-
-case class BatchSalesToPayoutReportSummaryRow(_id: Option[String] = None,
-                                              version: Option[Version] = None,
-                                              status: String,
-                                              sales: Double,
-                                              refunds: Double,
-                                              salesRefund: Double,
-                                              pending: Double,
-                                              payoutDate: Option[LocalDateTime],
-                                              paymentMethod: Option[String],
-                                              paymentMethodDescription: Option[String],
-                                              salesCount: Long,
-                                              refundCount: Long,
-                                              aiqFilename: String,
-                                              aiqProvider: String,
-                                              aiqMerchant: String
-                                             ) extends BatchSalesToPayoutReportRow
-
-object BatchSalesToPayoutReportSummaryRow {
-  implicit val decoder: JsonDecoder[BatchSalesToPayoutReportSummaryRow] =
-    DeriveJsonDecoder.gen[BatchSalesToPayoutReportSummaryRow]
-
-  implicit val encoder: JsonEncoder[BatchSalesToPayoutReportSummaryRow] =
-    DeriveJsonEncoder.gen[BatchSalesToPayoutReportSummaryRow]
-}
-
-case class BatchSalesToPayoutPaidOutReportRow(_id: Option[String] = None,
-                                              version: Option[Version] = None,
-                                              status: String,
-                                              sales: Double,
-                                              refunds: Double,
-                                              salesRefund: Double,
-                                              pending: Long,
-                                              payoutDate: LocalDateTime,
-                                              paymentMethod: String,
-                                              paymentMethodDescription: String,
-                                              salesCount: Long,
-                                              refundCount: Long,
-                                              aiqFilename: String,
-                                              aiqProvider: String,
-                                              aiqMerchant: String,
-                                             ) extends BatchSalesToPayoutReportRow
-
-object BatchSalesToPayoutPaidOutReportRow {
-  implicit val decoder: JsonDecoder[BatchSalesToPayoutPaidOutReportRow] =
-    DeriveJsonDecoder.gen[BatchSalesToPayoutPaidOutReportRow]
-  implicit val encoder: JsonEncoder[BatchSalesToPayoutPaidOutReportRow] =
-    DeriveJsonEncoder.gen[BatchSalesToPayoutPaidOutReportRow]
-}
-
+case class BatchSalesToPayoutReportRow(_id: Option[String] = None,
+                                         version: Option[Version] = None,
+                                         status: String,
+                                         sales: Double,
+                                         refunds: Double,
+                                         salesRefund: Double,
+                                         pending: Long,
+                                         payoutDate: LocalDateTime,
+                                         paymentMethod: String,
+                                         paymentMethodDescription: String,
+                                         salesCount: Long,
+                                         refundCount: Long,
+                                         aiqFilename: String,
+                                         aiqProvider: String,
+                                         aiqMerchant: String,
+                                        )
 
 object BatchSalesToPayoutReportRow {
 
@@ -86,55 +51,35 @@ object BatchSalesToPayoutReportRow {
     keywordField("paymentMethod"),
     keywordField("paymentMethodDescription"),
     keywordField("salesCount"),
-    keywordField("refundCount")
+    keywordField("refundCount"),
+    keywordField("batchNumber")
   )
 
-  implicit val formatter: Indexable[BatchSalesToPayoutReportRow] = {
-    case v: BatchSalesToPayoutReportSummaryRow => v.toJson
-    case v: BatchSalesToPayoutPaidOutReportRow => v.toJson
-  }
+  implicit val formatter: Indexable[BatchSalesToPayoutReportRow] = _.toJson
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
 
-  def fromESDocRaw(esDoc: ESDoc): BatchSalesToPayoutReportRow = {
-    val doc = esDoc.doc
-    doc(BatchSalesToPayoutReportField.status) match {
-      case status if status == "summary" =>
-        BatchSalesToPayoutReportSummaryRow(
-          None,
-          None,
-          status,
-          doc(BatchSalesToPayoutReportField.sales).toDouble,
-          doc(BatchSalesToPayoutReportField.refunds).toDouble,
-          doc(BatchSalesToPayoutReportField.salesRefund).toDouble,
-          doc(BatchSalesToPayoutReportField.pending).toDouble,
-          Option(doc(BatchSalesToPayoutReportField.payoutDate)).filter(_.nonEmpty).map(dateFormat.parse).map(_.toLocalDateTime),
-          Option(doc(BatchSalesToPayoutReportField.paymentMethod)).filter(_.nonEmpty),
-          Option(doc(BatchSalesToPayoutReportField.paymentMethodDescription)).filter(_.nonEmpty),
-          doc(BatchSalesToPayoutReportField.salesCount).toLong,
-          doc(BatchSalesToPayoutReportField.refundCount).toLong,
-          doc(AIQField.filename),
-          doc(AIQField.provider),
-          doc(AIQField.merchant)
-        )
-      case status if status == "paidOut" =>
-        BatchSalesToPayoutPaidOutReportRow(
-          None,
-          None,
-          status,
-          doc(BatchSalesToPayoutReportField.sales).toDouble,
-          doc(BatchSalesToPayoutReportField.refunds).toDouble,
-          doc(BatchSalesToPayoutReportField.salesRefund).toDouble,
-          doc(BatchSalesToPayoutReportField.pending).toLong,
-          dateFormat.parse(doc(BatchSalesToPayoutReportField.payoutDate)).toLocalDateTime,
-          doc(BatchSalesToPayoutReportField.paymentMethod),
-          doc(BatchSalesToPayoutReportField.paymentMethodDescription),
-          doc(BatchSalesToPayoutReportField.salesCount).toLong,
-          doc(BatchSalesToPayoutReportField.refundCount).toLong,
-          doc(AIQField.filename),
-          doc(AIQField.provider),
-          doc(AIQField.merchant)
-        )
+  def fromESDocRaw(esDocs: List[ESDoc]): List[BatchSalesToPayoutReportRow] = {
+    // skip summary row
+    esDocs.tail.map { esDoc =>
+      val doc = esDoc.doc
+      BatchSalesToPayoutReportRow(
+        None,
+        None,
+        doc(BatchSalesToPayoutReportField.status),
+        doc(BatchSalesToPayoutReportField.sales).toDouble,
+        doc(BatchSalesToPayoutReportField.refunds).toDouble,
+        doc(BatchSalesToPayoutReportField.salesRefund).toDouble,
+        doc(BatchSalesToPayoutReportField.pending).toLong,
+        dateFormat.parse(doc(BatchSalesToPayoutReportField.payoutDate)).toLocalDateTime,
+        doc(BatchSalesToPayoutReportField.paymentMethod),
+        doc(BatchSalesToPayoutReportField.paymentMethodDescription),
+        doc(BatchSalesToPayoutReportField.salesCount).toLong,
+        doc(BatchSalesToPayoutReportField.refundCount).toLong,
+        doc(AIQField.filename),
+        doc(AIQField.provider),
+        doc(AIQField.merchant)
+      )
     }
   }
 }

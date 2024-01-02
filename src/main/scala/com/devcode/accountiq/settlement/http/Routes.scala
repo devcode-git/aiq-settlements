@@ -59,6 +59,18 @@ class Routes(batchDAO: ElasticSearchDAO[BatchSalesToPayoutReportRow],
       } yield (res.toJson)
     }
 
+//  private val reconcileReports =
+//    endpoint.post
+//      .in("reconcile" / path[String] / path[String] / query[Option[Int]]("days") / stringJsonBody)
+//      .out(stringJsonBody)
+//      .zServerLogic { case (merchant, provider, days, timeFrame) =>
+//        for {
+//          dateRange <- getTimeFrame(days, timeFrame)
+//          cmd = ReconcileCmd(dateRange, merchant, provider)
+//          res <- ReconciliationService.reconcile(cmd).provide(ZLayer.succeed(settlementDAO)).orDie
+//        } yield (res.toJson)
+//      }
+
   private def getTimeFrame(days: Option[RuntimeFlags], timeFrame: String) = {
     ReconTimeFrame.decoder.decodeJson(timeFrame) match {
       case Right(tf) => ZIO.succeed(tf)

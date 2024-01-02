@@ -4,7 +4,7 @@ import com.devcode.accountiq.settlement.elastic.dao.ElasticSearchDAO
 import com.devcode.accountiq.settlement.elastic.reports.ESDoc
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
-import com.devcode.accountiq.settlement.elastic.reports.settlement.{SettlementDetailReport, SettlementDetailReportRow}
+import com.devcode.accountiq.settlement.elastic.reports.settlement.{SettlementDetailReportRow}
 import com.devcode.accountiq.settlement.elastic.reports.ESDoc
 import com.devcode.accountiq.settlement.transformer.CSVParser
 import com.devcode.accountiq.settlement.util.FileUtil
@@ -20,10 +20,10 @@ object TransformService {
     rows <- CSVParser.parse(file.toPath)
   } yield ESDoc.parseESDocs(rows, fileId, provider, merchant)
 
-  def saveReports[T: Tag](file: File, provider: String, merchant: String, fromESDocRaw: ESDoc => T) = {
+  def saveReports[T: Tag](file: File, provider: String, merchant: String, fromESDocRaw: List[ESDoc] => List[T]) = {
     for {
       esDocs <- parseESDocs(file, provider, merchant)
-      reports = esDocs.map(fromESDocRaw)
+      reports = fromESDocRaw(esDocs)
       dao <- ZIO.service[ElasticSearchDAO[T]]
       response <- dao.addBulk(reports)
       errors = response.toOption.map(_.items).map(_.map(_.error).collect { case Some(e) => e }.map(_.reason))

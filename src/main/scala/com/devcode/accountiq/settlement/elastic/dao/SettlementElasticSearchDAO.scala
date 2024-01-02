@@ -1,6 +1,6 @@
 package com.devcode.accountiq.settlement.elastic.dao
 
-import com.devcode.accountiq.settlement.elastic.reports.settlement.{SettlementDetailReport, SettlementDetailReportFeeRow, SettlementDetailReportMerchantPayoutRow, SettlementDetailReportRow}
+import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
 import com.sksamuel.elastic4s.ElasticApi.{boolQuery, termQuery}
 import com.sksamuel.elastic4s.requests.mappings.MappingDefinition
 import zio._
@@ -14,18 +14,18 @@ import scala.util.{Failure, Success, Try}
 
 
 class SettlementElasticSearchDAO(esClient: ElasticClient)
-  extends ElasticSearchDAO[SettlementDetailReport] {
+  extends ElasticSearchDAO[SettlementDetailReportRow] {
 
   val client: ElasticClient = esClient
   val indexName = "detail_settlement_merchant_reports"
-  val mapping: MappingDefinition = SettlementDetailReport.mapping
-  val reader: HitReader[SettlementDetailReport] = IndexableHitReader
-  val indexable: Indexable[SettlementDetailReport] = SettlementDetailReport.formatter
+  val mapping: MappingDefinition = SettlementDetailReportRow.mapping
+  val reader: HitReader[SettlementDetailReportRow] = IndexableHitReader
+  val indexable: Indexable[SettlementDetailReportRow] = SettlementDetailReportRow.formatter
   val dateFieldName: String = "creationDate"
   val refIdFieldName: String = "merchantReference"
 
-  implicit object IndexableHitReader extends HitReader[SettlementDetailReport] {
-    override def read(hit: Hit): Try[SettlementDetailReport] =
+  implicit object IndexableHitReader extends HitReader[SettlementDetailReportRow] {
+    override def read(hit: Hit): Try[SettlementDetailReportRow] =
       if (hit.isSourceEmpty) {
         Failure(new IllegalArgumentException(s"doc (id:${hit.id}) src is empty"))
       } else {
@@ -35,11 +35,7 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
         } yield entityJson.merge(infoJson)
 
         jsonVal.flatMap { j =>
-          j.asInstanceOf[Json.Obj].get("type").flatMap(_.asString) match {
-            case Some("Fee") => j.as[SettlementDetailReportFeeRow]
-            case Some("MerchantPayout") => j.as[SettlementDetailReportMerchantPayoutRow]
-            case Some(_) => j.as[SettlementDetailReportRow]
-          }
+          j.as[SettlementDetailReportRow]
         } match {
           case Right(j) => Success(j)
           case Left(e) => Failure(new IllegalArgumentException(
@@ -49,24 +45,18 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
       }
   }
 
-  override def addBulk(jsonEntities: List[SettlementDetailReport]) = {
+  override def addBulk(jsonEntities: List[SettlementDetailReportRow]) = {
     val settlementReports: List[SettlementDetailReportRow] = jsonEntities.collect { case r: SettlementDetailReportRow => r }
-    val settlementPayoutReports: List[SettlementDetailReportMerchantPayoutRow] = jsonEntities.collect { case r: SettlementDetailReportMerchantPayoutRow => r }
-    val settlementFeeReports: List[SettlementDetailReportFeeRow] = jsonEntities.collect { case r: SettlementDetailReportFeeRow => r }
 
     for {
       _ <- ZIO.logInfo("[SettlementElasticSearchDAO] Executing bulk addBulk")
 
       newSettlementReports <- removeSettlementDuplicates(settlementReports)
-      newSettlementPayoutReports <- removeSettlementPayoutDuplicates(settlementPayoutReports)
-      newSettlementFeeReports <- removeSettlementFeeDuplicates(settlementFeeReports)
-      newReports = newSettlementReports ++ newSettlementPayoutReports ++ newSettlementFeeReports
+      newReports = newSettlementReports
 
       res <- super.addBulk(newReports)
 
       _ <- logEntries(newSettlementReports, (ee: SettlementDetailReportRow) => s"[SettlementElasticSearchDAO] Adding settlement report entry with refId `${ee.merchantReference}`")
-      _ <- logEntries(newSettlementPayoutReports, (ee: SettlementDetailReportMerchantPayoutRow) => s"[SettlementElasticSearchDAO] Adding settlement payout report entry with type `${ee.`type`}` and date ${ee.creationDate}")
-      _ <- logEntries(newSettlementFeeReports, (ee: SettlementDetailReportFeeRow) => s"[SettlementElasticSearchDAO] Adding settlement fee report entry with type `${ee.`type`}` and date ${ee.creationDate}")
 
     }  yield res
   }
@@ -85,32 +75,6 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
     } yield newEntities
   }
 
-  private def removeSettlementPayoutDuplicates(settlementReports: List[SettlementDetailReportMerchantPayoutRow]): Task[List[SettlementDetailReportMerchantPayoutRow]] = {
-    val findQuery = typeCreationDateQuery(settlementReports.map(r => (r.`type`, r.creationDate)))
-    for {
-      existingEntitiesRes <- this.findByQuery(findQuery)
-      existingData <- ZIO.attempt(existingEntitiesRes.collect {
-        case v if v.isInstanceOf[SettlementDetailReportMerchantPayoutRow] =>
-          (v.asInstanceOf[SettlementDetailReportMerchantPayoutRow].`type`, v.asInstanceOf[SettlementDetailReportMerchantPayoutRow].creationDate)
-      })
-      (existingEntities, newEntities) = settlementReports.partition(r => existingData.contains((r.`type`, r.creationDate)))
-      _ <- logEntries(existingEntities, (ee: SettlementDetailReportMerchantPayoutRow) => s"[SettlementElasticSearchDAO] Skipping... Settlement entry SettlementDetailReportMerchantPayoutRow with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
-    } yield newEntities
-  }
-
-  private def removeSettlementFeeDuplicates(settlementReports: List[SettlementDetailReportFeeRow]): Task[List[SettlementDetailReportFeeRow]] = {
-    val findQuery = typeCreationDateQuery(settlementReports.map(r => (r.`type`, r.creationDate)))
-    for {
-      existingEntitiesRes <- this.findByQuery(findQuery)
-      existingData <- ZIO.attempt(existingEntitiesRes.collect {
-        case v if v.isInstanceOf[SettlementDetailReportFeeRow] =>
-          (v.asInstanceOf[SettlementDetailReportFeeRow].`type`, v.asInstanceOf[SettlementDetailReportFeeRow].creationDate)
-      })
-      (existingEntities, newEntities) = settlementReports.partition(r => existingData.contains((r.`type`, r.creationDate)))
-      _ <- logEntries(existingEntities, (ee: SettlementDetailReportFeeRow) => s"[SettlementElasticSearchDAO] Skipping... Settlement entry SettlementDetailReportFeeRow with type `${ee.`type`}` and creation date ${ee.creationDate.toString} already exists")
-    } yield newEntities
-  }
-
   private def typeCreationDateQuery(tuples: List[(String, LocalDateTime)]): BoolQuery = {
     boolQuery().should(tuples.map { case (reportType, creationDate) =>
       boolQuery().should(boolQuery().should(termQuery("type", reportType)), boolQuery().should(termQuery("creationDate", creationDate))).minimumShouldMatch(1)
@@ -120,8 +84,8 @@ class SettlementElasticSearchDAO(esClient: ElasticClient)
 }
 
 object SettlementElasticSearchDAO {
-  val live: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[SettlementDetailReport]] =
+  val live: ZLayer[ElasticClient, Nothing, ElasticSearchDAO[SettlementDetailReportRow]] =
     ZLayer.fromFunction(createSettlementDetail _)
-  private def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReport] =
+  private def createSettlementDetail(client: ElasticClient): ElasticSearchDAO[SettlementDetailReportRow] =
     new SettlementElasticSearchDAO(client)
 }

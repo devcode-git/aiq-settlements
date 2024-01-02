@@ -13,12 +13,10 @@ import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import scala.util.{Failure, Success, Try}
 
-sealed trait SettlementDetailReport
-
 case class SettlementDetailReportRow(
-                                    _id: Option[String] = None,
-                                    version: Option[Version] = None,
-                                    companyAccount: String,
+                                     _id: Option[String] = None,
+                                     version: Option[Version] = None,
+                                     companyAccount: String,
                                      merchantAccount: String,
                                      pspReference: String,
                                      merchantReference: Long,
@@ -42,107 +40,12 @@ case class SettlementDetailReportRow(
                                      modificationMerchantReference: String,
                                      batchNumber: Long,
                                      shopperReference: Long,
+                                     payoutDate: LocalDateTime,
                                      aiqFilename: String,
                                      aiqProvider: String,
-                                     aiqMerchant: String) extends SettlementDetailReport
+                                     aiqMerchant: String)
 
 object SettlementDetailReportRow {
-  implicit val decoder: JsonDecoder[SettlementDetailReportRow] =
-    DeriveJsonDecoder.gen[SettlementDetailReportRow]
-
-  implicit val encoder: JsonEncoder[SettlementDetailReportRow] =
-    DeriveJsonEncoder.gen[SettlementDetailReportRow]
-}
-
-object SettlementDetailReportMerchantPayoutRow {
-  implicit val decoder: JsonDecoder[SettlementDetailReportMerchantPayoutRow] =
-    DeriveJsonDecoder.gen[SettlementDetailReportMerchantPayoutRow]
-
-  implicit val encoder: JsonEncoder[SettlementDetailReportMerchantPayoutRow] =
-    DeriveJsonEncoder.gen[SettlementDetailReportMerchantPayoutRow]
-
-  def create(esDoc: ESDoc) = {
-    val doc = esDoc.doc
-    SettlementDetailReportMerchantPayoutRow(
-      None,
-      None,
-      doc(SettlementDetailReportField.companyAccount),
-      doc(SettlementDetailReportField.merchantAccount),
-      SettlementDetailReport.dateFormat.parse(doc(SettlementDetailReportField.creationDate)).toLocalDateTime,
-      doc(SettlementDetailReportField.timeZone),
-      doc(SettlementDetailReportField.`type`),
-      doc(SettlementDetailReportField.modificationReference),
-      doc(SettlementDetailReportField.netCurrency),
-      Option(doc(SettlementDetailReportField.netDebit)).filter(_.nonEmpty).map(_.toDouble),
-      doc(SettlementDetailReportField.batchNumber).toLong,
-      doc(AIQField.filename),
-      doc(AIQField.provider),
-      doc(AIQField.merchant)
-    )
-  }
-}
-
-object SettlementDetailReportFeeRow {
-  implicit val decoder: JsonDecoder[SettlementDetailReportFeeRow] =
-    DeriveJsonDecoder.gen[SettlementDetailReportFeeRow]
-
-  implicit val encoder: JsonEncoder[SettlementDetailReportFeeRow] =
-    DeriveJsonEncoder.gen[SettlementDetailReportFeeRow]
-
-  def create(esDoc: ESDoc) = {
-    val doc = esDoc.doc
-    SettlementDetailReportFeeRow(
-      None,
-      None,
-      doc(SettlementDetailReportField.companyAccount),
-      doc(SettlementDetailReportField.merchantAccount),
-      SettlementDetailReport.dateFormat.parse(doc(SettlementDetailReportField.creationDate)).toLocalDateTime,
-      doc(SettlementDetailReportField.timeZone),
-      doc(SettlementDetailReportField.`type`),
-      doc(SettlementDetailReportField.modificationReference),
-      doc(SettlementDetailReportField.netCurrency),
-      Option(doc(SettlementDetailReportField.netDebit)).filter(_.nonEmpty).map(_.toDouble),
-      doc(SettlementDetailReportField.batchNumber).toLong,
-      doc(AIQField.filename),
-      doc(AIQField.provider),
-      doc(AIQField.merchant)
-    )
-  }
-}
-
-case class SettlementDetailReportMerchantPayoutRow(
-                                                    _id: Option[String] = None,
-                                                    version: Option[Version] = None,
-                                                    companyAccount: String,
-                                                    merchantAccount: String,
-                                                    creationDate: LocalDateTime,
-                                                    timeZone: String,
-                                                    `type`: String,
-                                                    modificationReference: String,
-                                                    netCurrency: String,
-                                                    netDebit: Option[Double],
-                                                    batchNumber: Long,
-                                                    aiqFilename: String,
-                                                    aiqProvider: String,
-                                                    aiqMerchant: String) extends SettlementDetailReport
-
-case class SettlementDetailReportFeeRow(
-                                         _id: Option[String] = None,
-                                         version: Option[Version] = None,
-                                         companyAccount: String,
-                                         merchantAccount: String,
-                                         creationDate: LocalDateTime,
-                                         timeZone: String,
-                                         `type`: String,
-                                         modificationReference: String,
-                                         netCurrency: String,
-                                         netDebit: Option[Double],
-                                         batchNumber: Long,
-                                         aiqFilename: String,
-                                         aiqProvider: String,
-                                         aiqMerchant: String) extends SettlementDetailReport
-
-object SettlementDetailReport {
 
   val mapping = properties(
       keywordField("companyAccount"),
@@ -168,10 +71,11 @@ object SettlementDetailReport {
       keywordField("paymentMethodVariant"),
       keywordField("modificationMerchantReference"),
       keywordField("batchNumber"),
-      keywordField("shopperReference")
+      keywordField("shopperReference"),
+      keywordField("payoutDate")
   )
 
-  private def create(esDoc: ESDoc) = {
+  private def create(esDoc: ESDoc, payoutDate: LocalDateTime) = {
     val doc = esDoc.doc
     SettlementDetailReportRow(
       None,
@@ -200,32 +104,32 @@ object SettlementDetailReport {
       doc(SettlementDetailReportField.modificationMerchantReference),
       doc(SettlementDetailReportField.batchNumber).toLong,
       doc(SettlementDetailReportField.shopperReference).toLong,
+      payoutDate,
       doc(AIQField.filename),
       doc(AIQField.provider),
       doc(AIQField.merchant)
     )
   }
 
-  implicit val decoder: JsonDecoder[SettlementDetailReport] =
-    DeriveJsonDecoder.gen[SettlementDetailReport]
+  implicit val decoder: JsonDecoder[SettlementDetailReportRow] =
+    DeriveJsonDecoder.gen[SettlementDetailReportRow]
 
-  implicit val encoder: JsonEncoder[SettlementDetailReport] =
-    DeriveJsonEncoder.gen[SettlementDetailReport]
+  implicit val encoder: JsonEncoder[SettlementDetailReportRow] =
+    DeriveJsonEncoder.gen[SettlementDetailReportRow]
 
-  implicit val formatter: Indexable[SettlementDetailReport] = {
-    case r: SettlementDetailReportRow => r.toJson
-    case r: SettlementDetailReportMerchantPayoutRow => r.toJson
-    case r: SettlementDetailReportFeeRow => r.toJson
-  }
+  implicit val formatter: Indexable[SettlementDetailReportRow] =
+    r => r.toJson
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
-  def fromESDocRaw(esDoc: ESDoc): SettlementDetailReport = {
-    val doc = esDoc.doc
-    doc(SettlementDetailReportField.`type`) match {
-      case t if t.equalsIgnoreCase("Fee") => SettlementDetailReportFeeRow.create(esDoc)
-      case t if t.equalsIgnoreCase("MerchantPayout") => SettlementDetailReportMerchantPayoutRow.create(esDoc)
-      case _ => create(esDoc)
+  def fromESDocRaw(esDocs: List[ESDoc]): List[SettlementDetailReportRow] = {
+    val esDocsReverse = esDocs.reverse
+    val esDocMerchantPayout = esDocsReverse.head
+    val payoutDate: LocalDateTime = dateFormat.parse(esDocMerchantPayout.doc(SettlementDetailReportField.creationDate)).toLocalDateTime
+    val esDocsWithoutFeeAndMerchantPayout = esDocsReverse.drop(2)
+
+    esDocsWithoutFeeAndMerchantPayout.map { esDoc =>
+      create(esDoc, payoutDate)
     }
   }
 

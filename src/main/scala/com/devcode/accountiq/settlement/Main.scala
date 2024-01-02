@@ -3,7 +3,7 @@ package com.devcode.accountiq.settlement
 import com.devcode.accountiq.settlement.config.AppConfig
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
-import com.devcode.accountiq.settlement.elastic.reports.settlement.{SettlementDetailReport, SettlementDetailReportRow}
+import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
 import com.devcode.accountiq.settlement.elastic.ElasticSearchClient
 import com.devcode.accountiq.settlement.elastic.dao.{BatchElasticSearchDAO, ElasticSearchDAO, MerchantElasticSearchDAO, SettlementElasticSearchDAO}
 import com.devcode.accountiq.settlement.elastic.reports.ESDoc
@@ -43,7 +43,7 @@ object Main extends ZIOAppDefault {
     ElasticConfig.live
   )
 
-  private val settlementReportsElasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[SettlementDetailReport]] = ZLayer.make[ElasticSearchDAO[SettlementDetailReport]](
+  private val settlementReportsElasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[SettlementDetailReportRow]] = ZLayer.make[ElasticSearchDAO[SettlementDetailReportRow]](
     ElasticSearchClient.live,
     SettlementElasticSearchDAO.live,
     ElasticConfig.live
@@ -63,10 +63,10 @@ object Main extends ZIOAppDefault {
     "home/upload",
     "/Users/white/Desktop/win"))
 
-  private def recreateIndexes(): ZIO[ElasticSearchDAO[MerchantPaymentTransactionsReportRow] with ElasticSearchDAO[SettlementDetailReport] with ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, Unit] = for {
+  private def recreateIndexes(): ZIO[ElasticSearchDAO[MerchantPaymentTransactionsReportRow] with ElasticSearchDAO[SettlementDetailReportRow] with ElasticSearchDAO[BatchSalesToPayoutReportRow], Throwable, Unit] = for {
     batchSalesToPayoutReportRow <- ZIO.service[ElasticSearchDAO[BatchSalesToPayoutReportRow]]
     _ <- batchSalesToPayoutReportRow.recreateIndex()
-    settlementDetailReportRow <- ZIO.service[ElasticSearchDAO[SettlementDetailReport]]
+    settlementDetailReportRow <- ZIO.service[ElasticSearchDAO[SettlementDetailReportRow]]
     _ <- settlementDetailReportRow.recreateIndex()
     merchantPaymentTransactionsReportRow <- ZIO.service[ElasticSearchDAO[MerchantPaymentTransactionsReportRow]]
     _ <- merchantPaymentTransactionsReportRow.recreateIndex()
@@ -82,14 +82,14 @@ object Main extends ZIOAppDefault {
 //      _ <- SftpDownloader.downloadAccount().provideLayer(sftpAccount)
 //      _ <- createIndex().provide(elasticDAO)
 
-//      _ <- recreateIndexes()
+      _ <- recreateIndexes()
 
       batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
       _ <- TransformService.saveReports[BatchSalesToPayoutReportRow](batchPath, "adyen", "kindred", BatchSalesToPayoutReportRow.fromESDocRaw)
         .provide(batchReportsElasticDAO)
 
       settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
-      _ <- TransformService.saveReports[SettlementDetailReport](settlementPath, "adyen", "kindred", SettlementDetailReport.fromESDocRaw)
+      _ <- TransformService.saveReports[SettlementDetailReportRow](settlementPath, "adyen", "kindred", SettlementDetailReportRow.fromESDocRaw)
         .provide(settlementReportsElasticDAO)
 
       merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")

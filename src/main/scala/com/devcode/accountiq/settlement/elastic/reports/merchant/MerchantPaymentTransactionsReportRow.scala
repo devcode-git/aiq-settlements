@@ -77,31 +77,33 @@ object MerchantPaymentTransactionsReportRow {
 
   val dateFormat = new SimpleDateFormat("dd/MM/yy HH:mm")
 
-  def fromESDocRaw(esDoc: ESDoc): MerchantPaymentTransactionsReportRow = {
-    val doc = esDoc.doc
-    MerchantPaymentTransactionsReportRow(
-        None,
-        None,
-        doc(MerchantPaymentTransactionsReportField.operator),
-        doc(MerchantPaymentTransactionsReportField.provider),
-        doc(MerchantPaymentTransactionsReportField.txRef).toLong,
-        Option(doc(MerchantPaymentTransactionsReportField.txId)).filter(_.nonEmpty).map(_.toLong),
-        Option(doc(MerchantPaymentTransactionsReportField.providerRef)).filter(_.nonEmpty).map(_.toLong),
-        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.created)).toLocalDateTime,
-        dateFormat.parse(doc(MerchantPaymentTransactionsReportField.booked)).toLocalDateTime,
-        Money.parse(doc(MerchantPaymentTransactionsReportField.amount)),
-        Money.parse(doc(MerchantPaymentTransactionsReportField.amountBase)),
-        Option(doc(MerchantPaymentTransactionsReportField.txAmount)).filter(_.nonEmpty),
-        Option(doc(MerchantPaymentTransactionsReportField.txAmountBase)).filter(_.nonEmpty),
-        doc(MerchantPaymentTransactionsReportField.fee),
-        doc(MerchantPaymentTransactionsReportField.feeBase),
-        Option(doc(MerchantPaymentTransactionsReportField.method)).filter(_.nonEmpty),
-        doc(MerchantPaymentTransactionsReportField.txType),
-        doc(MerchantPaymentTransactionsReportField.userId).toLong,
-        doc(MerchantPaymentTransactionsReportField.jurisdiction),
-        doc(AIQField.filename),
-        doc(AIQField.provider),
-        doc(AIQField.merchant)
-    )
+  def fromESDocRaw(esDocs: List[ESDoc]): List[MerchantPaymentTransactionsReportRow] = {
+    esDocs.map { esDoc =>
+      val doc = esDoc.doc
+      MerchantPaymentTransactionsReportRow(
+          None,
+          None,
+          doc(MerchantPaymentTransactionsReportField.operator),
+          doc(MerchantPaymentTransactionsReportField.provider),
+          doc(MerchantPaymentTransactionsReportField.txRef).toLong,
+          Option(doc(MerchantPaymentTransactionsReportField.txId)).filter(_.nonEmpty).map(_.toLong),
+          Option(doc(MerchantPaymentTransactionsReportField.providerRef)).filter(_.nonEmpty).map(_.toLong),
+          dateFormat.parse(doc(MerchantPaymentTransactionsReportField.created)).toLocalDateTime,
+          dateFormat.parse(doc(MerchantPaymentTransactionsReportField.booked)).toLocalDateTime,
+          Money.parse(doc(MerchantPaymentTransactionsReportField.amount)),
+          Money.parse(doc(MerchantPaymentTransactionsReportField.amountBase)),
+          Option(doc(MerchantPaymentTransactionsReportField.txAmount)).filter(_.nonEmpty),
+          Option(doc(MerchantPaymentTransactionsReportField.txAmountBase)).filter(_.nonEmpty),
+          doc(MerchantPaymentTransactionsReportField.fee),
+          doc(MerchantPaymentTransactionsReportField.feeBase),
+          Option(doc(MerchantPaymentTransactionsReportField.method)).filter(_.nonEmpty),
+          doc(MerchantPaymentTransactionsReportField.txType),
+          doc(MerchantPaymentTransactionsReportField.userId).toLong,
+          doc(MerchantPaymentTransactionsReportField.jurisdiction),
+          doc(AIQField.filename),
+          doc(AIQField.provider),
+          doc(AIQField.merchant)
+      )
+    }
   }
 }

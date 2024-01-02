@@ -6,24 +6,32 @@ import com.sksamuel.elastic4s.ElasticDsl.keywordField
 import com.sksamuel.elastic4s.Indexable
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, EncoderOps, JsonDecoder, JsonEncoder}
 
-import java.time.LocalDate
+import java.time.LocalDateTime
 
-case class TransactionRow(transactionReference: String,
-                          processingAmount: Double,
-                          processingCurrency: String,
-                          transactionType: String,
-                          transactionDate: LocalDate,
+object ReconcileStatus extends Enumeration {
+  type ReconcileStatus = Value
+
+  val UNMATCHED = Value("UNMATCHED")
+  val MATCHED = Value("MATCHED")
+}
+
+case class TransactionRow(transactionReference: Long,
+                          processingAmount: Option[Double],
+                          processingCurrency: Option[String],
+                          transactionType: Option[String],
+                          transactionDate: Option[LocalDateTime],
+                          payoutDate: LocalDateTime,
                           paymentMethod: String,
                           grossSettledAmount: Double,
                           settledCurrency: String,
                           netSettledAmount: Double,
                           providerFees: Double,
                           forex: Double,
-                          batchNumber: Double,
-                          batchCreditAmount: Double,
-                          batchCurrency: String,
+                          batchNumber: Long,
+                          batchCreditAmount: Option[Double],
+                          //batchCurrency: Option[String], // TODO: no field in batch report
                           reconciliedStatus: String,
-                          reason: String)
+                          reason: Option[String])
 
 object TransactionRow {
 
@@ -33,6 +41,7 @@ object TransactionRow {
     keywordField("processingCurrency"),
     keywordField("transactionType"),
     dateField("transactionDate"),
+    dateField("payoutDate"),
     keywordField("paymentMethod"),
     keywordField("grossSettledAmount"),
     keywordField("settledCurrency"),
@@ -41,7 +50,7 @@ object TransactionRow {
     keywordField("forex"),
     keywordField("batchNumber"),
     keywordField("batchCreditAmount"),
-    keywordField("batchCurrency"),
+//    keywordField("batchCurrency"),
     keywordField("reconciliedStatus"),
     keywordField("reason")
   )

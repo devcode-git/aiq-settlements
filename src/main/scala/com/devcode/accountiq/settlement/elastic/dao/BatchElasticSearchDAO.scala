@@ -1,6 +1,6 @@
 package com.devcode.accountiq.settlement.elastic.dao
 
-import com.devcode.accountiq.settlement.elastic.reports.batch.{BatchSalesToPayoutPaidOutReportRow, BatchSalesToPayoutReportRow, BatchSalesToPayoutReportSummaryRow}
+import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.sksamuel.elastic4s.ElasticApi.{boolQuery, search, termQuery}
 import com.sksamuel.elastic4s.requests.mappings.MappingDefinition
 import zio._
@@ -36,12 +36,7 @@ class BatchElasticSearchDAO(esClient: ElasticClient)
         } yield entityJson.merge(infoJson)
 
         jsonVal.flatMap { j =>
-          j.asObject.flatMap(_.fields.find { case (k, _) => k == "status" }).flatMap(_._2.asString) match {
-            case Some("summary") => j.as[BatchSalesToPayoutReportSummaryRow]
-            case Some("paidOut") => j.as[BatchSalesToPayoutPaidOutReportRow]
-            case Some(v) => Left(s"Not expected value `${v}` for status")
-            case None => Left(s"Could not find status in json")
-          }
+          j.as[BatchSalesToPayoutReportRow]
         } match {
           case Right(j) => Success(j)
           case Left(e) => Failure(new IllegalArgumentException(
@@ -51,11 +46,9 @@ class BatchElasticSearchDAO(esClient: ElasticClient)
       }
   }
 
-  override def addBulk(jsonEntities: List[BatchSalesToPayoutReportRow]) = {
+  override def addBulk(paidOutReports: List[BatchSalesToPayoutReportRow]) = {
     // skipping the summary fields, looks like they do not needed for settlement reconciliation
-    val paidOutReports = jsonEntities.collect {
-      case r: BatchSalesToPayoutPaidOutReportRow => r
-    }
+
 
     val refIds = paidOutReports.map(r => (r.payoutDate, r.paymentMethod))
     val query = boolQuery()
@@ -67,14 +60,14 @@ class BatchElasticSearchDAO(esClient: ElasticClient)
       _ <- ZIO.logInfo("[BatchElasticSearchDAO] Executing bulk add")
       existingEntitiesSeq <- findByQuery(query)
       existingRefIds = existingEntitiesSeq.collect {
-        case r: BatchSalesToPayoutPaidOutReportRow => (r.payoutDate, r.paymentMethod)
+        case r => (r.payoutDate, r.paymentMethod)
       }
       (existingEntities, newEntities) = paidOutReports.partition(e => existingRefIds.contains((e.payoutDate, e.paymentMethod)))
       _ <- ZIO.foreachDiscard(existingEntities) { ee =>
         ZIO.logInfo(s"[BatchElasticSearchDAO] Skipping... Batch report row with payoutDate `${ee.payoutDate}` and paymentMethod `${ee.paymentMethod}` already exists")
       }
       res <- super.addBulk(newEntities)
-      _ <- logEntries(newEntities, (ee: BatchSalesToPayoutPaidOutReportRow) => s"[BatchElasticSearchDAO] Adding batch report row with payoutDate `${ee.payoutDate}` and paymentMethod `${ee.paymentMethod}`")
+      _ <- logEntries(newEntities, (ee: BatchSalesToPayoutReportRow) => s"[BatchElasticSearchDAO] Adding batch report row with payoutDate `${ee.payoutDate}` and paymentMethod `${ee.paymentMethod}`")
     } yield res
   }
 

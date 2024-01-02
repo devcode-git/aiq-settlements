@@ -33,7 +33,7 @@ trait ElasticSearchDAO[T] {
         Failure(new IllegalArgumentException(s"doc (id:${hit.id}) src is empty"))
       } else {
         val jsonVal = for {
-          entityJson <- hit.sourceAsString.fromJson[Json] // fromJson[BatchSalesToPayoutReportSummaryRow]
+          entityJson <- hit.sourceAsString.fromJson[Json]
           infoJson <- s"""{"_id": "${Some(hit.id)}", "version": {"_seq_no": ${hit.seqNo}, "_primary_term": ${hit.primaryTerm} } }""".fromJson[Json]
         } yield entityJson.merge(infoJson)
 
