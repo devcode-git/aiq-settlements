@@ -19,10 +19,12 @@ object ReconciliationService {
       merchantReports <- findMerchantPaymentTransactionsReports(reconcileCmd)
       // TODO: use ZIO.partition inside and return 2 lists - success/failure validated
       transactions <- validateSettlementAndMerchantReports(settlementReports.toList, merchantReports.toList)
-      (matchedTransactions, unmatchedTransactions) = transactions.partition(t => t.reason.isDefined)
+      (matchedTransactions, unmatchedTransactions) = transactions.partition(t => t.reason.isEmpty)
       batchReports <- findBatchSalesToPayoutReports(reconcileCmd)
       transactions <- validateTransactionsAndBatchReports(matchedTransactions, batchReports.toList)
       _ <- ZIO.logInfo(transactions.mkString(","))
+      dao <- ZIO.service[ElasticSearchDAO[TransactionRow]]
+      response <- dao.addBulk(transactions ++ unmatchedTransactions)
     } yield transactions
   }
 

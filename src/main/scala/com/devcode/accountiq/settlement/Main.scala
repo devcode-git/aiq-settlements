@@ -4,10 +4,10 @@ import com.devcode.accountiq.settlement.config.AppConfig
 import com.devcode.accountiq.settlement.elastic.reports.batch.BatchSalesToPayoutReportRow
 import com.devcode.accountiq.settlement.elastic.reports.merchant.MerchantPaymentTransactionsReportRow
 import com.devcode.accountiq.settlement.elastic.reports.settlement.SettlementDetailReportRow
-import com.devcode.accountiq.settlement.elastic.ElasticSearchClient
-import com.devcode.accountiq.settlement.elastic.dao.{BatchElasticSearchDAO, ElasticSearchDAO, MerchantElasticSearchDAO, SettlementElasticSearchDAO}
+import com.devcode.accountiq.settlement.elastic.{ElasticSearchClient, TransactionRow}
+import com.devcode.accountiq.settlement.elastic.dao.{BatchElasticSearchDAO, ElasticSearchDAO, MerchantElasticSearchDAO, ReconcileElasticSearchDAO, SettlementElasticSearchDAO}
 import com.devcode.accountiq.settlement.elastic.reports.ESDoc
-import com.devcode.accountiq.settlement.services.TransformService
+import com.devcode.accountiq.settlement.services.{ReconciliationService, TransformService}
 import com.devcode.accountiq.settlement.sftp.SftpDownloader
 import com.devcode.accountiq.settlement.sftp.SftpDownloader.SFTPAccount
 import com.devcode.accountiq.settlement.transformer.{CSVParser, XLSXParser}
@@ -18,6 +18,7 @@ import com.sksamuel.elastic4s.{ElasticClient => ESClient}
 import zio.json.ast.Json
 import zio.json._
 import com.devcode.accountiq.settlement.http.{Routes, ServerDependencies}
+import com.devcode.accountiq.settlement.recoonciliation.{ReconTimeFrame, ReconcileCmd}
 import zio.http.Server
 
 import java.io.File
@@ -55,6 +56,12 @@ object Main extends ZIOAppDefault {
     ElasticConfig.live
   )
 
+  private val reconcileTransactionsElasticDAO: ZLayer[Any, Config.Error, ElasticSearchDAO[TransactionRow]] = ZLayer.make[ElasticSearchDAO[TransactionRow]](
+    ElasticSearchClient.live,
+    ReconcileElasticSearchDAO.live,
+    ElasticConfig.live
+  )
+
   private val sftpAccount: ZLayer[Any, Nothing, SFTPAccount] = ZLayer.succeed(SFTPAccount(
     "s-050dbb81072240e89.server.transfer.eu-west-1.amazonaws.com",
     22,
@@ -82,19 +89,22 @@ object Main extends ZIOAppDefault {
 //      _ <- SftpDownloader.downloadAccount().provideLayer(sftpAccount)
 //      _ <- createIndex().provide(elasticDAO)
 
-      _ <- recreateIndexes()
+//      _ <- recreateIndexes()
 
-      batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
-      _ <- TransformService.saveReports[BatchSalesToPayoutReportRow](batchPath, "adyen", "kindred", BatchSalesToPayoutReportRow.fromESDocRaw)
-        .provide(batchReportsElasticDAO)
-
-      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
-      _ <- TransformService.saveReports[SettlementDetailReportRow](settlementPath, "adyen", "kindred", SettlementDetailReportRow.fromESDocRaw)
-        .provide(settlementReportsElasticDAO)
-
+//      batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
+//      _ <- TransformService.saveReports[BatchSalesToPayoutReportRow](batchPath, "adyen", "kindred", BatchSalesToPayoutReportRow.fromESDocRaw)
+//        .provide(batchReportsElasticDAO)
+//
+//      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
+//      _ <- TransformService.saveReports[SettlementDetailReportRow](settlementPath, "adyen", "kindred", SettlementDetailReportRow.fromESDocRaw)
+//        .provide(settlementReportsElasticDAO)
+//
       merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
       _ <- TransformService.saveReports[MerchantPaymentTransactionsReportRow](merchantPaymentTransactions, "adyen", "kindred", MerchantPaymentTransactionsReportRow.fromESDocRaw)
         .provide(merchantPaymentTransactionsReportsElasticDAO)
+
+      reconCmd = ReconcileCmd(ReconTimeFrame.forDaysBack(720), "kindred", "adyen")
+      _ <- ReconciliationService.reconcile(reconCmd)
 
     } yield ())
 
@@ -107,7 +117,8 @@ object Main extends ZIOAppDefault {
       Routes.live,
       batchReportsElasticDAO,
       settlementReportsElasticDAO,
-      merchantPaymentTransactionsReportsElasticDAO
+      merchantPaymentTransactionsReportsElasticDAO,
+      reconcileTransactionsElasticDAO
     )
   }
 
