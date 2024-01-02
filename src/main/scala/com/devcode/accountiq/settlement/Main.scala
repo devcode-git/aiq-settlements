@@ -89,17 +89,26 @@ object Main extends ZIOAppDefault {
 //      _ <- SftpDownloader.downloadAccount().provideLayer(sftpAccount)
 //      _ <- createIndex().provide(elasticDAO)
 
-//      _ <- recreateIndexes()
+      _ <- recreateIndexes()
 
-//      batchPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv")
-//      _ <- TransformService.saveReports[BatchSalesToPayoutReportRow](batchPath, "adyen", "kindred", BatchSalesToPayoutReportRow.fromESDocRaw)
-//        .provide(batchReportsElasticDAO)
+      //real data:
+      batchPathStr = "/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/real/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv"
+      settlementPathStr = "/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/real/Belgium settlement_detail_report_batch_297.csv"
+      merchantPathStr = "/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/real/test-payment_transactions_04082023.csv"
+      //test data:
+//      batchPathStr = "/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium salestopayout_sales_2023_08_01_2023_08_07_EUR.csv"
+//      settlementPathStr = "/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv"
+//      merchantPathStr = "/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv"
+
+      batchPath = new File(batchPathStr)
+      _ <- TransformService.saveReports[BatchSalesToPayoutReportRow](batchPath, "adyen", "kindred", BatchSalesToPayoutReportRow.fromESDocRaw)
+        .provide(batchReportsElasticDAO)
+
+      settlementPath = new File(settlementPathStr)
+      _ <- TransformService.saveReports[SettlementDetailReportRow](settlementPath, "adyen", "kindred", SettlementDetailReportRow.fromESDocRaw)
+        .provide(settlementReportsElasticDAO)
 //
-//      settlementPath = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/Belgium settlement_detail_report_batch_297.csv")
-//      _ <- TransformService.saveReports[SettlementDetailReportRow](settlementPath, "adyen", "kindred", SettlementDetailReportRow.fromESDocRaw)
-//        .provide(settlementReportsElasticDAO)
-//
-      merchantPaymentTransactions = new File("/Users/white/IdeaProjects/aiq-settlement-reconciliation/src/main/resources/test-payment_transactions_04082023.csv")
+      merchantPaymentTransactions = new File(merchantPathStr)
       _ <- TransformService.saveReports[MerchantPaymentTransactionsReportRow](merchantPaymentTransactions, "adyen", "kindred", MerchantPaymentTransactionsReportRow.fromESDocRaw)
         .provide(merchantPaymentTransactionsReportsElasticDAO)
 
